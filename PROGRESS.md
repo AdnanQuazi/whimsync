@@ -13,13 +13,13 @@
 - [x] Create simple `docker-compose.yml` to run background Redis Valkey on port 6379 for local development.
 - [x] Verify environment builds and Python can execute cleanly.
 
-### Step 2: Space-Scoped SQLite Manager (`/src/shared/db.py`) (NEXT UP)
-- [ ] Implement async/sync connection pooler for `/data/spaces/{space_id}.db`.
-- [ ] Enforce mandatory SQLite PRAGMAs (`journal_mode = WAL`, `synchronous = NORMAL`, `busy_timeout = 5000`).
-- [ ] Implement automatic schema migrator initializing our core tables (`episodes`, `facts`, `fact_embeddings`, `facts_fts`, `edges`, `wiki_sections`, `identity`).
-- [ ] Write integration test verifying WAL concurrent read/write behavior and `sqlite-vec` extension loading.
+### Step 2: Space-Scoped SQLite Manager (`/src/shared/db.py`) (COMPLETED)
+- [x] Implement async/sync connection pooler for `/data/spaces/{space_id}.db`.
+- [x] Enforce mandatory SQLite PRAGMAs (`journal_mode = WAL`, `synchronous = NORMAL`, `busy_timeout = 5000`).
+- [x] Implement automatic schema migrator initializing our core tables (`episodes`, `facts`, `fact_embeddings`, `facts_fts`, `edges`, `wiki_sections`, `identity`).
+- [x] Write integration test verifying WAL concurrent read/write behavior and `sqlite-vec` extension loading.
 
-### Step 3: Fast-Path Filter & Novelty Check (`/src/perception/`)
+### Step 3: Fast-Path Filter & Novelty Check (`/src/perception/`) (NEXT UP)
 - [ ] Implement low-entropy regex bypass filter (`fast_path.py`) to intercept trivial chatter (<1ms target).
 - [ ] Implement in-memory Locality-Sensitive Hashing (`lsh_novelty.py` via `datasketch`) for semantic deduplication.
 - [ ] Write unit tests verifying immediate rejection of duplicate inputs without touching SQLite.
