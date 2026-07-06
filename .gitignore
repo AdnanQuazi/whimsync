@@ -1,0 +1,39 @@
+# Python / uv Virtual Environment
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment Variables & Secrets
+.env
+.env.*
+!.env.example
+
+# Whimsync SQLite Space Databases & Logs
+data/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.log
+
+# IDEs & Editor Files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.tmp
+
+# OS Generated Files
+.DS_Store
+Thumbs.db
