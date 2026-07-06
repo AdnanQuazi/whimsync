@@ -3,7 +3,7 @@
 > [!IMPORTANT]
 > **Early-Stage Development Notice:** This project is currently in active early-stage development and architectural planning. All documented architectures, data flow topologies, and performance latency targets (SLA metrics) represent design objectives and may evolve as implementation progresses.
 
-> **The Cognitive Memory & Context Layer for AI Assistants & Coding Agents**  
+> **The Cognitive Memory & Context Layer for AI Assistants & Coding Agents**
 > *Maximize cognitive depth and retrieval speed per unit of operational complexity.*
 
 [![Status](https://img.shields.io/badge/Status-v1.0%20Active%20Dev-brightgreen.svg)]()

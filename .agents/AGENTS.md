@@ -3,7 +3,7 @@
 > [!IMPORTANT]
 > **Early-Stage Development Notice:** This project is currently in active early-stage development and architectural planning. All documented architectures, data flow topologies, and performance latency targets (SLA metrics) represent design objectives and may evolve as implementation progresses.
 
-> **IMPORTANT FOR ALL AI AGENTS & CODING ASSISTANTS:**  
+> **IMPORTANT FOR ALL AI AGENTS & CODING ASSISTANTS:**
 > When working in this repository, you must strictly obey the following architectural rules and design contracts established in `WHIMSYNC.md`. Never deviate from these rules without explicit user approval.
 
 ---
@@ -28,7 +28,7 @@ Because SQLite enforces file-level write locking, you must adhere to our 4-layer
    * **Deep-Brain Worker process exclusively owns writes to:** `facts` (*where insight_tier > 'raw'*), `edges`, `wiki_sections`, and `identity`.
 3. **Optimistic Concurrency Control (OCC):** When updating `wiki_sections` or `identity`, check versions and never overwrite human edits:
    ```sql
-   UPDATE wiki_sections SET content = :val, version = version + 1 
+   UPDATE wiki_sections SET content = :val, version = version + 1
    WHERE section_key = :key AND version = :expected_version AND provenance != 'user_stated';
    ```
 4. **Human Supremacy Rule:** If any row has `provenance == 'user_stated'`, automated reflection or LLM jobs are strictly forbidden from modifying its content.

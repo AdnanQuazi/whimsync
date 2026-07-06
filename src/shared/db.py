@@ -10,26 +10,26 @@ Enforces:
 
 import sqlite3
 from pathlib import Path
-from typing import Optional
+
 import sqlite_vec
 
 DEFAULT_DATA_DIR = Path("./data/spaces")
 
 
-def get_db_path(space_id: str, data_dir: Optional[Path] = None) -> Path:
+def get_db_path(space_id: str, data_dir: Path | None = None) -> Path:
     """Resolve the absolute path for a space database and ensure directories exist."""
     base_dir = data_dir or DEFAULT_DATA_DIR
     base_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Sanitize space_id to avoid path traversal
     safe_space_id = "".join(c for c in space_id if c.isalnum() or c in ("_", "-"))
     if not safe_space_id:
         raise ValueError("Invalid space_id provided.")
-        
+
     return base_dir / f"{safe_space_id}.db"
 
 
-def get_space_db(space_id: str, data_dir: Optional[Path] = None) -> sqlite3.Connection:
+def get_space_db(space_id: str, data_dir: Path | None = None) -> sqlite3.Connection:
     """
     Acquire a connection to a space-scoped SQLite database.
     Enforces WAL mode, synchronous normal, busy timeout, and loads sqlite-vec.
@@ -53,7 +53,7 @@ def get_space_db(space_id: str, data_dir: Optional[Path] = None) -> sqlite3.Conn
     return conn
 
 
-def init_space_db(space_id: str, data_dir: Optional[Path] = None) -> sqlite3.Connection:
+def init_space_db(space_id: str, data_dir: Path | None = None) -> sqlite3.Connection:
     """
     Initialize schema for a space database if tables do not exist.
     Creates tables: episodes, facts, fact_embeddings (vec0), facts_fts (fts5), edges, wiki_sections, identity.
@@ -153,12 +153,12 @@ def init_space_db(space_id: str, data_dir: Optional[Path] = None) -> sqlite3.Con
 
     # Compound B-tree Indexes for instant POSIX namespace isolation
     cursor.execute("""
-    CREATE INDEX IF NOT EXISTS idx_facts_namespace 
+    CREATE INDEX IF NOT EXISTS idx_facts_namespace
     ON facts (namespace_path, is_latest, confidence DESC);
     """)
 
     cursor.execute("""
-    CREATE INDEX IF NOT EXISTS idx_wiki_namespace 
+    CREATE INDEX IF NOT EXISTS idx_wiki_namespace
     ON wiki_sections (namespace_path, version DESC);
     """)
 
