@@ -26,7 +26,7 @@ Follow these formatting rules:
 ## 3. Create Compound Indexes for Fast Namespace Retrieval
 If queries will filter by memory container or namespace path, add a compound B-tree index:
 ```sql
-CREATE INDEX IF NOT EXISTS idx_{table_name}_namespace 
+CREATE INDEX IF NOT EXISTS idx_{table_name}_namespace
 ON {table_name} (namespace_path, is_latest, confidence DESC);
 ```
 

@@ -4,7 +4,7 @@
 > **Early-Stage Development Notice:** This project is currently in active early-stage development and architectural planning. All documented architectures, data flow topologies, and performance latency targets (SLA metrics) represent design objectives and may evolve as implementation progresses.
 
 > **The Cognitive Memory & Context Layer for AI**
-> 
+>
 > *Maximize cognitive value and retrieval speed per unit of operational complexity.*
 
 ---
@@ -162,7 +162,7 @@ When updating the Wiki or Identity layer, the Cognitive Worker must obey two rul
 1. **The Human Supremacy Rule:** If `provenance == 'user_stated'`, the machine worker is strictly forbidden from modifying the text.
 2. **Optimistic Version Checking:** When compiling a section, the worker executes:
    ```sql
-   UPDATE wiki_sections 
+   UPDATE wiki_sections
    SET content = :new_text, version = version + 1, updated_at = :now
    WHERE section_key = :key AND version = :expected_version AND provenance != 'user_stated';
    ```
@@ -222,13 +222,13 @@ Level 1: Raw Facts         "User chose async handler for Project A" (Week 1)
                               │
                               ▼ [Evidence Gate: ≥5 facts across ≥2 time periods]
                               │
-Level 2: Insight Nodes     "User has a consistent architectural preference for 
+Level 2: Insight Nodes     "User has a consistent architectural preference for
  (Reflected Patterns)       non-blocking async patterns over synchronous code."
                            Status: Tier = Candidate | Confidence = 0.82
                               │
                               ▼ [Accumulation: 20+ facts across 4+ time periods]
                               │
-Level 3: Identity Layer    "User values reliability, operational clarity, and explicit 
+Level 3: Identity Layer    "User values reliability, operational clarity, and explicit
  (Synthesized Beliefs)      control over systems. Prefers predictable over 'magic.'"
                            Status: Tier = Established | Confidence = 0.94 | λ = 0.0005
                               │
@@ -323,6 +323,6 @@ Whimsync will expose a standard **MCP Server** interface (via stdio or SSE) allo
 * **MCP Resources Provided:** `whimsync://spaces/{space_id}/wiki` (allowing agents to read the compiled Markdown Wiki directly into their context window as a live, evolving instruction system).
 
 ---
-*Document Version: 1.0 — Master Specification*  
-*Project Status: Active Development — Phase 1 Foundation*  
+*Document Version: 1.0 — Master Specification*
+*Project Status: Active Development — Phase 1 Foundation*
 *Last Updated: July 2026*

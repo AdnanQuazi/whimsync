@@ -2,9 +2,8 @@
 Integration tests for Whimsync Space-Scoped SQLite Manager.
 """
 
-import sqlite3
-import pytest
 from pathlib import Path
+
 from src.shared.db import get_space_db, init_space_db
 
 
@@ -12,7 +11,7 @@ def test_init_space_db_and_wal_mode(tmp_path: Path):
     """Verify schema initialization and mandatory WAL pragma enforcement."""
     conn = init_space_db("test_wal_space", data_dir=tmp_path)
     cursor = conn.cursor()
-    
+
     # Check journal mode
     cursor.execute("PRAGMA journal_mode;")
     mode = cursor.fetchone()[0]
@@ -21,9 +20,17 @@ def test_init_space_db_and_wal_mode(tmp_path: Path):
     # Check tables exist
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' OR type='table' AND sql LIKE '%VIRTUAL%';")
     tables = {row[0] for row in cursor.fetchall()}
-    expected_tables = {"episodes", "facts", "fact_embeddings", "facts_fts", "edges", "wiki_sections", "identity"}
+    expected_tables = {
+        "episodes",
+        "facts",
+        "fact_embeddings",
+        "facts_fts",
+        "edges",
+        "wiki_sections",
+        "identity",
+    }
     assert expected_tables.issubset(tables), f"Missing core tables: {expected_tables - tables}"
-    
+
     conn.close()
 
 
@@ -34,20 +41,23 @@ def test_sqlite_vec_extension(tmp_path: Path):
 
     # Create dummy 1536-dim vector string: "[0.1, 0.1, ...]"
     dummy_vec = "[" + ", ".join(["0.1"] * 1536) + "]"
-    
+
     cursor.execute("INSERT INTO fact_embeddings (fact_id, embedding) VALUES (?, ?);", ("fact_1", dummy_vec))
     conn.commit()
 
     # Query using vec_distance_cosine
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT fact_id, vec_distance_cosine(embedding, ?) as dist
         FROM fact_embeddings
         WHERE fact_id = 'fact_1';
-    """, (dummy_vec,))
+    """,
+        (dummy_vec,),
+    )
     row = cursor.fetchone()
     assert row["fact_id"] == "fact_1"
     assert abs(row["dist"]) < 1e-5, "Distance between identical vectors should be ~0"
-    
+
     conn.close()
 
 
