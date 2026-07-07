@@ -19,12 +19,12 @@
 - [x] Implement automatic schema migrator initializing our core tables (`episodes`, `facts`, `fact_embeddings`, `facts_fts`, `edges`, `wiki_sections`, `identity`).
 - [x] Write integration test verifying WAL concurrent read/write behavior and `sqlite-vec` extension loading.
 
-### Step 3: Fast-Path Filter & Novelty Check (`/src/perception/`) (NEXT UP)
-- [ ] Implement low-entropy regex bypass filter (`fast_path.py`) to intercept trivial chatter (<1ms target).
-- [ ] Implement in-memory Locality-Sensitive Hashing (`lsh_novelty.py` via `datasketch`) for semantic deduplication.
-- [ ] Write unit tests verifying immediate rejection of duplicate inputs without touching SQLite.
+### Step 3: Fast-Path Filter & Novelty Check (`whimsync/perception/`) (COMPLETED)
+- [x] Implement low-entropy regex bypass filter (`fast_path.py`) to intercept trivial chatter (<1ms target).
+- [x] Implement in-memory Locality-Sensitive Hashing (`lsh_novelty.py` via `datasketch`) for semantic deduplication.
+- [x] Write unit tests verifying immediate rejection of duplicate inputs without touching SQLite.
 
-### Step 4: Atomic Fact Extraction Engine (`/src/perception/fact_extractor.py`)
+### Step 4: Atomic Fact Extraction Engine (`whimsync/perception/fact_extractor.py`) (NEXT UP)
 - [ ] Integrate local GLiNER (`gliner-small-v2.1`) for zero-shot entity recognition.
 - [ ] Implement structured Pydantic schema for Entity-Relationship-Entity triples.
 - [ ] Implement extraction wrapper supporting both local SLMs (Qwen/Phi) and Claude 3.5 Haiku API fallback.
