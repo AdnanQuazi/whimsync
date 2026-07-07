@@ -4,7 +4,7 @@ Integration tests for Whimsync Space-Scoped SQLite Manager.
 
 from pathlib import Path
 
-from src.shared.db import get_space_db, init_space_db
+from whimsync.shared.db import get_space_db, init_space_db
 
 
 def test_init_space_db_and_wal_mode(tmp_path: Path):
