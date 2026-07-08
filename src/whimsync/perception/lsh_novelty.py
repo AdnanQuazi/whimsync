@@ -1,8 +1,8 @@
 """
-Whimsync Gate 2: In-Memory LSH Novelty Checker.
+Whimsync Gate 1: In-Memory LSH Novelty Checker.
 
 Uses Locality-Sensitive Hashing (datasketch MinHashLSH) to detect duplicate or
-near-duplicate semantic statements (<1ms SLA target) without touching SQLite or embedding APIs.
+near-duplicate lexical statements (<1ms SLA target) without touching SQLite or embedding APIs.
 """
 
 import re
