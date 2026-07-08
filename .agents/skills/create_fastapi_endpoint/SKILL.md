@@ -20,36 +20,37 @@ class MemoryAddRequest(BaseModel):
     namespace_path: str = Field(default="/general", description="POSIX container path")
 
 class MemoryAddResponse(BaseModel):
-    status: str = "success"
-    fact_ids: list[str]
+    status: str = "accepted"
+    episode_id: str
+    space_id: str
     latency_ms: float
 ```
 
 ## 2. Inject Space-Scoped DB Connection & OpenTelemetry Tracing
 Every endpoint that touches SQLite must acquire a space-scoped connection from the pool and wrap execution in a span:
 ```python
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from opentelemetry import trace
 from src.shared.db import get_space_db
 
-router = APIRouter(prefix="/api/v1/memory", tags=["memory"])
+router = APIRouter(prefix="/v1/memories", tags=["memories"])
 tracer = trace.get_tracer(__name__)
 
-@router.post("/add", response_model=MemoryAddResponse)
+@router.post("", response_model=MemoryAddResponse, status_code=status.HTTP_202_ACCEPTED)
 async def add_memory(payload: MemoryAddRequest, db = Depends(get_space_db)):
     with tracer.start_as_current_span("api.memory.add") as span:
         span.set_attribute("space_id", payload.space_id)
         # 1. Check Fast-Path regex filter
-        # 2. Check LSH novelty index
-        # 3. Insert to SQLite & push to Redis Stream
-        return MemoryAddResponse(fact_ids=["f_123"], latency_ms=4.2)
+        # 2. Check Gate 1 LSH novelty index
+        # 3. Persist Episode to SQLite & push to Redis Stream queue
+        return MemoryAddResponse(status="accepted", episode_id="ep_123", space_id=payload.space_id, latency_ms=4.2)
 ```
 
 ## 3. Ensure Zero Heavy Compute on the Sync Path
 Check your endpoint logic against this checklist:
 - [ ] Does it make an outgoing LLM API call? If yes, CANCEL. Move it to the async Deep-Brain worker or use a local SLM/fast-path.
 - [ ] Does it execute a long table scan without an index? If yes, add a compound B-tree index.
-- [ ] Does it return within the sub-15ms p50 SLA target?
+- [ ] Does it return within the sub-15ms p50 SLA design target (to validate via benchmarks)?
 
 ## 4. Add Automated Route Test
-Create a test in `/tests/test_api.py` using FastAPI's `TestClient` or `AsyncClient` verifying status code 200, schema compliance, and sub-15ms response SLA target.
+Create a test in `/tests/test_api.py` using FastAPI's `TestClient` or `AsyncClient` verifying status code (`202 Accepted` for ingestion or `200 OK` for retrieval), schema compliance, and sub-15ms response SLA design target.
