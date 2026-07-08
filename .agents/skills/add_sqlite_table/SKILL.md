@@ -9,11 +9,11 @@ description: Step-by-step instructions for adding a new table or modifying SQLit
 
 Use this skill whenever you need to add a new table, virtual table, or column to Whimsync space databases (`/data/spaces/{space_id}.db`).
 
-## 1. Verify Table Ownership Contract
-Before defining the DDL, determine which process owns writes to this table:
-- **Fast-Core API Only:** For high-throughput ingestion tables (like `episodes`, `raw` facts).
-- **Deep-Brain Worker Only:** For synthesized cognitive tables (like `insights`, `edges`, `wiki_sections`).
-Document the write owner in a SQL comment above the table definition.
+## 1. Verify Sole-Writer & Domain Mutation Authority
+All physical SQL write statements are executed exclusively by **FastAPI (Sole Writer)** locally and by the **Space Durable Object** in Cloudflare mode. Determine which service holds **Domain Mutation Authority** (logical ownership of mutations sent to the sole writer):
+- **Fast-Core API Authority:** For high-throughput ingestion tables (`episodes`, `facts`, `evidence`, `fact_embeddings`).
+- **Deep-Brain Worker Authority:** For synthesized cognitive tables (`beliefs`, `insights`, `edges`, `wiki_sections`).
+Document the domain mutation authority in a SQL comment above the table definition.
 
 ## 2. Define the DDL in `/src/shared/db.py` (or Schema Migrator)
 Add your `CREATE TABLE IF NOT EXISTS` statement inside the schema initialization function.

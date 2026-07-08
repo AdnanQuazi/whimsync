@@ -16,44 +16,46 @@
 ### Step 2: Space-Scoped SQLite Manager (`/src/shared/db.py`) (COMPLETED)
 - [x] Implement async/sync connection pooler for `/data/spaces/{space_id}.db`.
 - [x] Enforce mandatory SQLite PRAGMAs (`journal_mode = WAL`, `synchronous = NORMAL`, `busy_timeout = 5000`).
-- [x] Implement automatic schema migrator initializing our core tables (`episodes`, `facts`, `fact_embeddings`, `facts_fts`, `edges`, `wiki_sections`, `identity`).
+- [x] Implement initial core tables (`episodes`, `facts`, `fact_embeddings`, `facts_fts`, `edges`, `wiki_sections`, `identity`).
 - [x] Write integration test verifying WAL concurrent read/write behavior and `sqlite-vec` extension loading.
 
-### Step 3: Fast-Path Filter & Novelty Check (`whimsync/perception/`) (COMPLETED)
+### Step 3: Fast-Path Filter & Gate 1 Lexical Novelty (`whimsync/perception/`) (COMPLETED)
 - [x] Implement low-entropy regex bypass filter (`fast_path.py`) to intercept trivial chatter (<1ms target).
-- [x] Implement in-memory Locality-Sensitive Hashing (`lsh_novelty.py` via `datasketch`) for semantic deduplication.
+- [x] Implement Gate 1 in-memory SimHash/MinHash LSH (`lsh_novelty.py` via `datasketch`) for cheap lexical deduplication.
 - [x] Write unit tests verifying immediate rejection of duplicate inputs without touching SQLite.
 
-### Step 4: Atomic Fact Extraction Engine (`whimsync/perception/fact_extractor.py`) (NEXT UP)
+### Step 4: 11-Table Schema Upgrade & Fact Extractor (`whimsync/perception/fact_extractor.py`) (NEXT UP)
+- [ ] **Schema Upgrade:** Migrate `db.py` to our canonical 11-table schema (`episodes`, `facts`, `evidence`, `beliefs`, `belief_evidence`, `insights`, `insight_support`, `edges`, `fact_embeddings`, `facts_fts`, `wiki_sections`) and enforce Sole-Writer mutation rules targeting permanent ULID `space_id` space databases (`/data/spaces/{space_id}.db`).
 - [ ] Integrate local GLiNER (`gliner-small-v2.1`) for zero-shot entity recognition.
-- [ ] Implement structured Pydantic schema for Entity-Relationship-Entity triples.
-- [ ] Implement extraction wrapper supporting both local SLMs (Qwen/Phi) and Claude 3.5 Haiku API fallback.
-- [ ] Write test verifying a verbose paragraph decomposes into isolated triples with `is_latest = 1` flags.
+- [ ] Implement structured Pydantic schema for **Qualified Attributed Facts** (`Fact`, `Evidence`, and `Belief` schemas with confidence, authority, and context).
+- [ ] Implement Gate 2 semantic novelty checking and extraction wrapper supporting local SLMs (Qwen/Phi) and Claude 3.5 Haiku API fallback.
+- [ ] Write test verifying a verbose paragraph decomposes into attributed facts and evidence rows without overwriting user identity.
 
 ### Step 5: Single-DB Hybrid Search (`/src/retrieval/hybrid_search.py`)
-- [ ] Implement cosine similarity vector search via `sqlite-vec`.
+- [ ] Implement cosine similarity vector search via `sqlite-vec` (with `RetrievalPort` adapter abstraction).
 - [ ] Implement BM25 keyword search via SQLite FTS5 (`facts_fts`).
 - [ ] Implement 2-hop recursive CTE graph traversal (`WITH RECURSIVE`).
 - [ ] Implement recency $\times$ confidence $\times$ tier reranker combining all three search signals.
-- [ ] Verify multi-space parallel query performance (<15ms SLA target).
+- [ ] Verify multi-space parallel query performance with read-your-writes policy (<15ms SLA target).
 
 ### Step 6: Fast-Core API Server (`/src/main_api.py`)
-- [ ] Build FastAPI server with OpenTelemetry tracing instrumentation.
-- [ ] Implement `POST /api/v1/memory/add` (Fast-Path $\rightarrow$ LSH $\rightarrow$ Extractor $\rightarrow$ SQLite insert $\rightarrow$ Redis Stream event).
-- [ ] Implement `POST /api/v1/memory/search` (Query Router $\rightarrow$ Parallel Hybrid Search).
-- [ ] Implement `GET /api/v1/profile` reading pre-compiled JSON directly from Redis T1 cache (<1ms target).
-- [ ] Implement instant GDPR deletion endpoint (`DELETE /api/v1/space/{id}`).
+- [ ] Build FastAPI server (Sole SQLite Writer) with OpenTelemetry tracing instrumentation.
+- [ ] Implement Space Management & ULID resolution (provisioning default `My Space` for new users; allowing manual named space creation).
+- [ ] Implement `POST /v1/memories` requiring explicit `space_id` ULID (Fast-Path $\rightarrow$ Gate 1 LSH $\rightarrow$ Episode insert $\rightarrow$ Queue push $\rightarrow$ Instant `202 Accepted`).
+- [ ] Implement `POST /v1/memories/search` (Query Router $\rightarrow$ Parallel Hybrid Search across committed facts + unprocessed episodes).
+- [ ] Implement `GET /v1/wiki` reading relational markdown sections.
+- [ ] Implement instant GDPR deletion endpoint (`DELETE /v1/space/{id}`).
 
 ---
 
 ## ⚪ Phase 2: The Cognitive Engine (UPCOMING)
-- [ ] Step 7: Redis Streams Epoch Scheduler & Token Bucket Rate Limiter (`/src/main_worker.py`).
+- [ ] Step 7: **Event-Driven Thermostat & Eligibility Scoring** ($\text{Score} = 0.3 \times \text{NewFacts} + 1.5 \times \text{Contradictions}$).
 - [ ] Step 8: Evidence Gate ($\ge 5$ facts across $\ge 2$ distinct time periods).
 - [ ] Step 9: Claude 3.5 Haiku Reflection Engine (generating Insight Nodes).
-- [ ] Step 10: Batch Contradiction Classifier (`preference_change`, `context_shift`, etc.).
-- [ ] Step 11: Markdown Wiki Compiler (`GET /api/v1/wiki`).
+- [ ] Step 10: Belief Reconciliation Engine (`ACTIVE` vs. `HISTORICAL` temporal trend tracking).
+- [ ] Step 11: Relational Markdown Wiki Compiler (`GET /v1/wiki/{section}`).
 - [ ] Step 12: Identity Layer & Category-Specific Belief Decay ($\lambda$).
-- [ ] Step 13: Human Edit Reconciliation & OCC Version Checking (`PUT /api/v1/wiki`).
+- [ ] Step 13: Human Supremacy Semantic Diff Engine & OCC Version Checking (`PATCH /v1/wiki`).
 
 ---
 
