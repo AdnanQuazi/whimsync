@@ -1,35 +1,35 @@
-# Whimsync v1 — Development Progress Tracker
+# Whimsync — Development Progress Tracker
 
-> **Engineering Roadmap & Step-by-Step Implementation Tracker**
+> **Engineering Roadmap & Step-by-Step Implementation Tracker for Whimsync Monorepo (Bun / Hono / Next.js / Postgres)**
 
 ---
 
 ## 🟡 Phase 1: Foundation & Local Self-Hosted Infrastructure (CURRENT FOCUS)
 
-### Step 1: Monorepo & Environment Setup
-- [ ] Initialize workspace with Bun & TypeScript (`package.json`, `tsconfig.json`).
-- [ ] Scaffold monorepo structure (`apps/api` for Hono, `apps/worker` for BullMQ consumer, `apps/web` for Next.js dashboard, `packages/db` for shared models).
-- [ ] Create `docker-compose.yml` for self-hosted local infrastructure (`postgres` preloaded with `pgvector`, `redis`, `minio`).
-- [ ] Verify local containers launch cleanly and Bun execution environment is ready.
+### Step 1: Monorepo & Environment Setup (IN PROGRESS)
+- [x] Create `docker-compose.yml` for self-hosted local infrastructure (`postgres` preloaded with `pgvector`, `redis`, `minio`).
+- [x] Verify local containers launch cleanly and Bun execution environment is ready.
+- [ ] Initialize Bun Workspaces monorepo structure (`apps/api` for Hono, `apps/worker` for BullMQ consumer, `apps/web` for Next.js dashboard, `packages/db` for shared database models).
+- [ ] Configure workspace package names, TypeScript configurations, and root development scripts.
 
-### Step 2: Database Schema & Migrations (Postgres + pgvector)
-- [ ] Configure PostgreSQL database connection pool and migration setup.
+### Step 2: Database Schema & Migrations (`packages/db`)
+- [ ] Configure PostgreSQL connection pool (`postgres` / Drizzle / Kysely) in `packages/db`.
 - [ ] Create DDL migrations for Scoping & Access Control tables (`orgs`, `org_memberships`, `namespaces`, `namespace_permissions`).
 - [ ] Create DDL migrations for Memory & Attribution tables (`episodes`, `memory_claims`, `memory_relationships`, `entities`, `entity_relationships`, `evidence`, `vectors`).
 - [ ] Add compound B-tree indexes (`tenant_id`, `namespace`, `status`) and `pgvector` HNSW index for vector cosine similarity search.
 
 ---
 
-## ⚪ Phase 2: Authentication & Synchronous API (`apps/api`)
+## ⚪ Phase 2: Authentication & Synchronous Hono API (`apps/api`)
 
 ### Step 3: Google Sign-In & Account Auto-Provisioning
-- [ ] Configure Google OAuth 2.0 / OIDC identity verification in Hono.
+- [ ] Configure Google OAuth 2.0 / OIDC identity verification middleware in Hono.
 - [ ] Implement auto-provisioning logic: on first sign-in, create a personal `org` (`tenant_id`), assign `role: owner` membership, and provision `"default"` namespace.
-- [ ] Issue stateless signed JWT / secure session cookies carrying verified `user_id` and `tenant_id`.
+- [ ] Issue stateless signed JWT / secure HTTP-only session cookies carrying verified `user_id` and `tenant_id`.
 
 ### Step 4: Fast Ingestion Endpoint (`POST /v1/memories`)
 - [ ] Validate incoming request body against schema (`tenant_id`, `namespace`, text).
-- [ ] Persist immutable `episode` row in Postgres.
+- [ ] Persist immutable `episode` row in Postgres (`packages/db`).
 - [ ] Enqueue asynchronous extraction job to BullMQ via Redis.
 - [ ] Return immediate non-blocking response (`202 Accepted`).
 
@@ -43,7 +43,7 @@
 ## ⚪ Phase 3: Asynchronous Extraction & Mutation Worker (`apps/worker`)
 
 ### Step 6: BullMQ Consumer Setup
-- [ ] Initialize standalone Bun worker process consuming jobs from Redis queue.
+- [ ] Initialize standalone Bun worker process (`apps/worker`) consuming jobs from Redis queue.
 - [ ] Build error handling, retries, and job status observability.
 
 ### Step 7: Single-Call LLM Extraction Engine
@@ -65,10 +65,10 @@
 ## ⚪ Phase 4: Frontend Dashboard & Cloud Scaling (`apps/web`)
 
 ### Step 10: Next.js Dashboard & Memory Explorer
-- [ ] Build Google Sign-In authentication and onboarding UI.
+- [ ] Build Google Sign-In authentication and onboarding UI in `apps/web`.
 - [ ] Build Org/Tenant & Namespace management interface (invites, roles, permissions).
 - [ ] Build inspectable Memory Explorer and Wiki viewer.
 
 ### Step 11: Production & Cloud Deployment Configurations
-- [ ] Prepare production Docker build scripts for self-hosted container deployment.
+- [ ] Build multi-stage production Dockerfile for running Hono API (`apps/api`) and BullMQ worker (`apps/worker`).
 - [ ] Configure Phase 1 cloud infrastructure deployment manifests (AWS ECS Express Mode + Neon DB + Amazon SQS).

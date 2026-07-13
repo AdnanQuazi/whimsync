@@ -1,6 +1,6 @@
 # Whimsync v1 — Cognitive Memory & Context Layer for AI
 
-> **Fast, explainable, multi-tenant AI memory with real storage tiering and citation-backed claims.**
+> **Fast, explainable, multi-tenant AI memory with single-call extraction and citation-backed claims.**
 
 [![Runtime](https://img.shields.io/badge/Runtime-Bun%20%7C%20TypeScript-black.svg)]()
 [![API Framework](https://img.shields.io/badge/API-Hono-orange.svg)]()
@@ -12,7 +12,7 @@
 
 ## ⚡ Overview & Design Goals
 
-Whimsync v1 is a stateful, explainable memory and context layer designed for AI assistants, coding agents, and multi-tenant applications.
+Whimsync is a stateful, explainable memory and context layer designed for AI assistants, coding agents, and multi-tenant applications.
 
 ### Core Design Goals
 - **Fast ingestion, single LLM understanding call:** Ingest messages instantly and perform single-call extraction of claims, relationship edges, entity quintuplets, and mutations.
@@ -23,26 +23,8 @@ Whimsync v1 is a stateful, explainable memory and context layer designed for AI 
 
 ---
 
-## 🔐 Scoping & Access Control Contract
+## 🏗️ Architecture & Pipeline
 
-Every account is an **organization (`tenant_id`)**. Solo users receive an auto-provisioned personal org where they are the sole `admin`. Multi-member teams operate under the exact same contract.
-
-### Field Contract
-| Field | Nullable? | Default if omitted | Job |
-|---|---|---|---|
-| `tenant_id` | No | None (Explicit) | **Security boundary.** Every claim belongs to exactly one org. |
-| `namespace` | **No** | `"default"` | **Isolation & ACL boundary.** Access rules and permissions are scoped per namespace. |
-| `user_id` | No | None (Explicit) | **Authorship.** Identifies the creator of the claim. |
-| `entity_key` | **Yes** | None | Scoping tag for a domain subject (e.g., `customer:123`). |
-| `session_id` | **Yes** | None | Lifecycle tag for temporary or session-bounded claims. |
-
-- **Authentication:** **Google Sign-In (OAuth 2.0 / OIDC)**. First-time sign-in auto-provisions an `org` (`tenant_id`), assigns `role: owner`, and creates the `"default"` namespace.
-
----
-
-## 🏗️ Architecture & Storage Tiers
-
-### Single-Call Extraction Pipeline
 ```mermaid
 flowchart LR
     A[Raw message] --> B[Store raw episode]
@@ -54,13 +36,6 @@ flowchart LR
     G --> H[Mutation evaluation vs prior claims]
     H --> I[Atomic flip: active / superseded]
 ```
-
-### Storage Tiering
-| Tier | Purpose & Query Behavior | Backing Store |
-|---|---|---|
-| **Hot** | **Default query scope.** Active memory claims, recent episodes, and live relationship graphs. | Postgres + `pgvector` |
-| **Warm** | **Excluded from default queries.** Superseded claims, expired session facts, and inactive scopes retrievable via explicit index filters. | Same Postgres database |
-| **Cold** | **Offline / Archive storage.** Historical snapshots and compliance exports offloaded physically from Postgres. | S3-Compatible Object Store (MinIO self-hosted; R2 / S3 cloud) |
 
 ---
 
@@ -75,25 +50,28 @@ flowchart LR
 
 ---
 
-## 🚀 Quick Start (Self-Hosted Architecture)
+## 🚀 Quick Start (Local Development)
 
-The self-hosted environment runs out-of-the-box with zero external dependencies via a single `docker-compose.yml`.
+### 1. Prerequisites
+Ensure you have [Bun](https://bun.sh/) and [Docker](https://www.docker.com/) installed.
 
+### 2. Launch Local Infrastructure
+Start local PostgreSQL (`pgvector`), Redis, and MinIO containers in the background:
 ```bash
-# Clone repository
-git clone https://github.com/AdnanQuazi/whimsync.git
-cd whimsync
-
-# Launch self-hosted stack (App API, Background Worker, Postgres + pgvector, Redis, MinIO)
 docker compose up -d
 ```
 
-### Services Included in `docker-compose.yml`:
-- `app`: Local Hono API server for synchronous ingestion and retrieval.
-- `worker`: Dedicated BullMQ background consumer process for LLM extraction and mutations.
-- `postgres`: PostgreSQL container pre-loaded with `pgvector`.
-- `redis`: Redis container powering BullMQ asynchronous queues.
-- `minio`: S3-compatible local object storage container for cold archives.
+### 3. Install Workspace Dependencies
+```bash
+bun install
+```
+
+### 4. Start Development Servers
+Run the Hono API server (`apps/api`) in development mode with hot reload:
+```bash
+bun run dev:api
+```
+The API server will run locally at `http://localhost:3000`.
 
 ---
 

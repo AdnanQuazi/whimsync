@@ -1,4 +1,4 @@
-# Whimsync v1 — AI Agent Workspace Rules & Architectural Commandments
+# Whimsync — AI Agent Workspace Rules & Architectural Commandments
 
 > **IMPORTANT FOR ALL AI AGENTS & CODING ASSISTANTS:**
 > When working in this repository, you must strictly obey the following architectural rules and design contracts established in `WHIMSYNC.md`. Never deviate from these rules without explicit user approval.
@@ -45,3 +45,25 @@
 3. Keep all heavy cognitive extraction and mutation evaluation in the asynchronous background worker (`worker` container).
 4. Enforce tenant isolation via indexed `tenant_id` column filtering (`WHERE tenant_id = ?`).
 5. Keep compute, queue, and database co-located within the same region and network to guarantee ultra-low retrieval latency.
+
+---
+
+## 6. Monorepo Folder Structure & Architectural Best Practices
+
+When generating or refactoring code, always organize modules using clear separation of concerns across our Bun workspaces:
+
+### `apps/api/src/` Layout (Hono HTTP Server)
+- **`routes/`**: Define HTTP routing paths and attach Zod request validation middleware (`@hono/zod-validator`). Routes should contain minimal logic and delegate execution to controllers/handlers.
+- **`controllers/` (or `handlers/`)**: Request/response adapters. Parse authenticated context (`c.get('user')`), call domain services, and return typed JSON HTTP responses.
+- **`services/`**: Core business and orchestration logic (e.g., `memoryIngestService.ts`, `searchService.ts`, `authService.ts`). Domain services must be pure TypeScript modules independent of Hono HTTP context.
+- **`middleware/`**: Cross-cutting HTTP middleware (authentication, tenant/namespace authorization guards, rate limiting, structured error handling).
+- **`schemas/`**: Zod validation schemas for API inputs and responses.
+
+### `apps/worker/src/` Layout (BullMQ Asynchronous Consumer)
+- **`consumers/`**: BullMQ queue worker setup and event listeners (`episodeConsumer.ts`).
+- **`cognitive/`**: Single-call LLM extraction pipeline, schema definitions, and prompt templates (`extractor.ts`).
+- **`mutations/`**: Atomic database transaction execution flipping `pending_review` $\rightarrow$ `active` / `superseded` (`mutationEngine.ts`).
+
+### `packages/db/src/` Layout (Shared Database Layer)
+- **`schema/`**: Definitive PostgreSQL + `pgvector` table definitions (`orgs.ts`, `memories.ts`, `entities.ts`).
+- **`client.ts`**: Singleton PostgreSQL database connection pool exported across `api` and `worker`.

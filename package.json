@@ -1,0 +1,8 @@
+{
+	"name": "whimsync",
+	"private": true,
+	"workspaces": ["apps/*", "packages/*"],
+	"scripts": {
+		"dev:api": "bun --filter api dev"
+	}
+}
