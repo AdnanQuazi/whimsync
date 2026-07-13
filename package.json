@@ -1,8 +1,16 @@
 {
-	"name": "whimsync",
-	"private": true,
-	"workspaces": ["apps/*", "packages/*"],
-	"scripts": {
-		"dev:api": "bun --filter api dev"
-	}
+  "name": "whimsync",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:api": "bun --filter api dev",
+    "lint": "biome check .",
+    "format": "biome check --write ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.3"
+  }
 }

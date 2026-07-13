@@ -9,7 +9,7 @@ repos:
       - id: check-json
 
   - repo: https://github.com/biomejs/pre-commit
-    rev: v1.9.4
+    rev: v2.3.0
     hooks:
       - id: biome-check
-        additional_dependencies: ["@biomejs/biome@1.9.4"]
+        additional_dependencies: ["@biomejs/biome@2.5.3"]
