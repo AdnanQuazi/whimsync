@@ -1,13 +1,70 @@
 services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: whimsync-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: whimsync
+      POSTGRES_PASSWORD: whimsync_dev_pass
+      POSTGRES_DB: whimsync
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U whimsync -d whimsync"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   redis:
     image: valkey/valkey:8-alpine
     container_name: whimsync-redis
+    restart: unless-stopped
+    command: valkey-server --save 60 1 --loglevel warning
     ports:
       - "6379:6379"
     volumes:
-      - valkey-data:/data
-    command: valkey-server --save 60 1 --loglevel warning
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: whimsync-minio
     restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: whimsync
+      MINIO_ROOT_PASSWORD: whimsync_dev_pass
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: whimsync-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set whimsync http://minio:9000 whimsync whimsync_dev_pass;
+      mc mb whimsync/whimsync-cold --ignore-existing;
+      exit 0;
+      "
 
 volumes:
-  valkey-data:
+  postgres_data:
+  redis_data:
+  minio_data:

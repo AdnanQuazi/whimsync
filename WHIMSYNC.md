@@ -1,404 +1,344 @@
-# Whimsync — Engineering Blueprint (v1.0)
+# Whimsync v1
 
-> [!IMPORTANT]
-> **Early-Stage Development Notice:** This project is currently in active early-stage development and architectural planning. All documented architectures, data flow topologies, and performance latency targets (SLA metrics) represent design objectives and may evolve as implementation progresses.
+## Design goals
 
-> **The Cognitive Memory & Context Layer for AI**
->
-> *Maximize cognitive value and retrieval speed per unit of operational complexity.*
-
----
-
-## Table of Contents
-1. [Executive Summary & Core Thesis](#1-executive-summary--core-thesis)
-2. [What Whimsync Is & What It Does](#2-what-whimsync-is--what-it-does)
-3. [System Architecture: Portable Cognitive Monolith (Ports & Adapters)](#3-system-architecture-portable-cognitive-monolith-ports--adapters)
-4. [Storage Architecture: Space-Scoped DBs & Containers](#4-storage-architecture-space-scoped-dbs--containers)
-5. [Concurrency Control & SQLite Lock Defenses](#5-concurrency-control--sqlite-lock-defenses)
-6. [Cost Optimization: Model Tiering & Epoch Batching](#6-cost-optimization-model-tiering--epoch-batching)
-7. [The Definitive Technology Stack & Rationales](#7-the-definitive-technology-stack--rationales)
-8. [The 6-Stage Canonical Cognitive Hierarchy (L0–L5)](#8-the-6-stage-canonical-cognitive-hierarchy-l0l5)
-9. [Deployment & Horizontal Scaling Topology](#9-deployment--horizontal-scaling-topology)
-10. [Pragmatic Build Phases (Roadmap)](#10-pragmatic-build-phases-roadmap)
-11. [Future Add-Ons Architecture (Connectors & MCP)](#11-future-add-ons-architecture-connectors--mcp)
-12. [The 15 Architecture Principles to Preserve](#12-the-15-architecture-principles-to-preserve)
+- Fast ingestion, single LLM understanding call
+- Accurate relationship classification
+- Real storage tiering (hot / warm / cold)
+- Explainable, citation-backed memory
+- Multi-tenant (personal + enterprise) support from day one
 
 ---
 
-## 1. Executive Summary & Core Thesis
+## 1. Scoping & access control model
 
-Every existing AI memory system on the market falls into one of two traps:
-1. **The Opaque / Un-Editable Memory Trap (Traditional Chunk-Based Stores / External Graph-Vector Tools):** While some existing commercial memory systems feature fast vector-graph retrieval, background clustering, and programmatic JSON profiles, their memory remains *opaque and programmatic*. You cannot inspect their internal understanding as a coherent narrative, users cannot intuitively edit or override beliefs in plain text, and contradiction handling is often reduced to binary flag toggles rather than preserving historical evolution.
-2. **The Operationally Impossible Trap (Academic Multi-Database Architectures):** They design brilliant multi-tier cognitive loops, but require operating 6+ independent databases and microservices (vector DBs + graph DBs + relational DBs + document stores + message queues) with heavy LLM calls on every synchronous write. They collapse in production under network latency, lock contention, and cloud infrastructure bills.
+**Every account is an org.** Signup auto-provisions a personal org (the user is its sole `admin`). Joining a company later means membership in a second org. There is no separate "personal account" code path — a solo user's org just happens to have one member. This is the single mechanism, used everywhere.
 
-### The Whimsync Solution: **Speed of Edge SQLite + Inspectable Wiki Supremacy**
-Whimsync is built on a single engineering thesis: **We can achieve sub-15ms retrieval SLAs and deep cognitive abstraction simultaneously by eliminating network round-trips via local SQLite databases while running heavy cognitive synthesis in an asynchronous, scheduled background worker.**
+### Field contract
 
-* **Storage systems required to operate:** Exactly **2** (SQLite per space + Redis).
-* **p50 Read Latency Target (To Validate via Benchmarks):** **<10ms** (via local in-process SQLite hybrid search + Redis profile cache).
-* **p95 Read Latency Target (To Validate via Benchmarks):** **<30ms** (via multi-space parallel local queries).
-* **Cognitive Moat:** Human-Readable/Editable Markdown Wiki + Typed Contradiction Timelines + Category-Specific Belief Decay ($\lambda$) + Optimistic Concurrency Control overrides.
+`Nullable` = schema-level constraint (can this column ever be empty). `Default` = what gets written if the caller omits it. These are independent — a field can be required *and* have a default. Order below is top-down for readability (`tenant → namespace → author`), not a physical nesting — every field is still an independent, flat, indexed column.
 
----
-
-## 2. What Whimsync Is & What It Does
-
-Whimsync is a persistent, stateful memory and context engine designed as a drop-in API for AI assistants, coding agents, and autonomous workflows.
-
-### What Whimsync Automatically Does Behind the Scenes:
-* **Enforces an Explicit Space Model:** Spaces are explicit, user-controlled memory isolation boundaries identified by permanent ULIDs (`01J...`). Every user receives one default space named `My Space`. Every memory ingestion request (`POST /v1/memories`) must explicitly include a `space_id`; Whimsync does not automatically classify memories into spaces in v1. Space names are human-facing and editable.
-* **Enforces a 6-Layer Cognitive Hierarchy:** Instead of flat vector dumps, memory progresses through a strict pipeline: `Experience (Event) -> Fact -> Evidence -> Belief -> Insight -> Compiled Context (Wiki / Retrieval)`. This ensures extraction errors never directly contaminate user identity.
-* **Decomposes Experience into Qualified Attributed Facts:** Whimsync extracts structured assertions linked to explicit `Evidence` rows containing confidence scores, observation timestamps, and contextual domains (e.g., `[Adnan] -> [prefers] -> [SQLite WAL] (context: local-first)`).
-* **Filters Noise at the Gate:** An ultra-fast regex heuristic filter and Gate 1 Locality-Sensitive Hashing (LSH) index intercept trivial chatter and duplicate statements before they ever burn embedding tokens or database writes.
-* **Synthesizes Understanding via Event-Driven Reflection:** Governed by a deterministic Event-Driven Thermostat ($\text{NewFacts} \ge N \lor \text{Contradictions} \ge C \lor \text{Age} \ge T$), an asynchronous Reflection Engine examines accumulated facts. When thresholds are met ($\ge 5$ facts across $\ge 2$ distinct time periods), Whimsync generates high-order **Insight Nodes**.
-* **Manages Evolving Beliefs & Contradictions:** When preferences evolve (*"Likes MongoDB"* in Jan vs. *"Prefers SQLite"* in June), Whimsync reconciles the trend in its authoritative `Belief` store, marking current truths as `ACTIVE` and past states as `HISTORICAL` with mathematical temporal decay ($\lambda$).
-* **Compiles an Inspectable Relational Markdown Wiki:** Whimsync compiles its internal graph into modular, chunked Markdown pages (`wiki/technical_stack.md`, `wiki/diet.md`). The Wiki is a **read-only projection for retrieval**, not a second source of truth.
-* **Honors Human Supremacy via Semantic Diffs:** Direct edits to the Markdown Wiki are processed through a Semantic Diff Engine (`ADD_ASSERTION`, `CORRECT_ASSERTION`, etc.) and assigned **`USER_PINNED (Level 6)`** authority on our 6-tier ladder (`SYSTEM_INFERRED < MODEL_EXTRACTED < BEHAVIOR_OBSERVED < USER_STATED < USER_CONFIRMED < USER_PINNED`). The machine reflection engine is architecturally forbidden from ever overwriting pinned human beliefs.
-
----
-
-## 3. System Architecture: Portable Cognitive Monolith (Ports & Adapters)
-
-Whimsync is built on a strict **Ports & Adapters** architecture so that the exact same cognitive brain and domain logic runs across both a simple **Early-Stage Local/VPS** deployment and a distributed **Cloudflare Edge** deployment.
-
-### 1. Shared Architecture Between Deployments
-The cognitive and domain layers are deployment-independent by design (while external worker Python cognition code is shared, Cloudflare Worker Gateway and Durable Object implementations use Cloudflare-specific runtime adapters):
-* **Shared Cognitive & Domain Logic:** Space domain model (`ULID`), Episode model, Fact extraction pipeline, Evidence model, Belief reconciliation, Contradiction classification rules, Reflection Engine, Evidence Gate, Insight model, Context Compiler, Wiki compiler, Profile builder, and Pydantic schemas.
-* **Infrastructure Adapters (Local/VPS Mode):** SQLite repository (`sqlite-vec`), Redis Streams queue adapter.
-* **Infrastructure Adapters (Cloudflare Mode):** Durable Object storage adapter, Cloudflare Queue adapter, Cloud vector retrieval adapter (separate from local `sqlite-vec`).
-
-### 2. Early-Stage Local/VPS Architecture (Stage 1 & Stage 2)
-
-We build the simplest deployable architecture first: **Stage 1 runs on a single VPS** (suggested initial hardware target: 8 vCPU, 16 GB RAM, NVMe storage), with a zero-code-change upgrade path to **Stage 2 (split Worker VPS)** when ML inference scales.
-
-```
-Client / Agent
-  ──(POST /v1/memories with space_id)──► FastAPI (Sole Physical SQLite Writer)
-                                              │                ▲
-                                     (Enqueue Job)             │ (Mutation Command)
-                                              ▼                │
-                                         Redis Streams ────────┘
-                                              │
-                                       (Async Pull)
-                                              ▼
-                                      Background Worker
-                                 (GLiNER, Extraction, Reflection)
-```
-
-* **FastAPI Responsibilities:** Authentication/authorization, space management and ULID resolution, memory ingestion API (`POST /v1/memories`), fast-path noise filtering, lexical novelty filtering (Gate 1 LSH), episode persistence, retrieval/projection APIs (`GET /v1/wiki`, `/v1/profile`), job enqueueing, **sole physical SQLite writer**, and mutation command consumption.
-* **Redis/Valkey Responsibilities:** Background job transport (extraction, belief reconciliation, reflection, projection), mutation commands buffer, short-lived working state, and Profile JSON cache.
-* **Background Worker Responsibilities:** GLiNER entity recognition, fact extraction, semantic novelty checking (Gate 2), embedding generation, belief reconciliation, ambiguous contradiction classification, reflection & insight generation, and optional natural-language Wiki synthesis.
-* **Upgrade Path:**
-  * **Stage 1 (Single VPS):** One box running `whimsync-api` + `whimsync-worker` + `Valkey/Redis` + `/data/spaces/*.db`.
-  * **Stage 2 (Split Worker VPS):** VPS A (`API + Redis + SQLite`) and VPS B (`Worker`). Communication remains strictly queue-based via Redis Streams.
-
-### 3. Cloudflare Edge Architecture
-
-In Cloudflare, the Durable Object is the authoritative state owner for its Space, while heavy ML inference runs in an external worker container:
-
-```
-Client / Agent
-  ──(POST /v1/memories)──► Cloudflare Worker Gateway
-                                  │
-                          (Space Resolution)
-                                  ▼
-                         Space Durable Object (Embedded SQLite)
-                                  │
-                           (Cloudflare Queue)
-                                  ▼
-                          External Worker (GLiNER / ML Extraction)
-                                  │
-                           (Mutation RPC)
-                                  ▼
-                         Space Durable Object
-```
-
-* **Cloudflare Worker Gateway:** Auth, space resolution, API routing.
-* **Space Durable Object:** One logical stateful actor per Space ULID (`01J...`), embedded SQLite storage, concurrency control, authoritative persistence for `episodes, facts, evidence, beliefs, insights, wiki_sections`, FTS retrieval, and applying mutation commands from the external worker.
-* **Cloudflare Queue:** Buffer for extraction, belief, reflection, and projection jobs.
-* **External Worker:** GLiNER NER, fact extraction, embeddings, semantic novelty, belief reconciliation, reflection, and Wiki synthesis.
-
----
-
-## 4. Storage Architecture: Space-Scoped DBs & Containers
-
-To support both **Memory Containers (`containerTag`)** and **Multi-User / Multi-Agent Shared Memory** without database duplication or network RPCs, Whimsync uses **Space-Scoped SQLite Databases**.
-
-### 1. Space-Scoped Databases (`/data/spaces/{space_id}.db`)
-Instead of locking databases to a user ID, storage is partitioned by **Cognitive Spaces**:
-* **Personal Space:** `space_usr_arjun.db` (Private to Arjun).
-* **Project Space:** `space_proj_whimsync.db` (Shared by Arjun, Sarah, and coding agents).
-* **Team/Org Space:** `space_org_engineering.db` (Shared across the department).
-
-When Arjun queries his AI while working on Whimsync, the Fast-Core API checks Redis permissions (`SISMEMBER access:space_proj_whimsync:users "arjun"`), opens both `space_usr_arjun.db` and `space_proj_whimsync.db` locally, and executes hybrid searches **in parallel**. Total multi-space retrieval SLA target: **<15ms**.
-
-### 2. Hierarchical Namespaces
-Within every space database, facts and wiki sections carry hierarchical POSIX-style namespace paths:
-* `/work/whimsync/architecture`
-* `/work/whimsync/bugs`
-* `/personal/fitness`
-
-By utilizing SQLite compound B-tree indexes on `(namespace_path, is_latest, confidence DESC)`, an agent can query with pinpoint precision (`WHERE namespace_path = '/work/whimsync/architecture'`) or broad domain reach (`WHERE namespace_path LIKE '/work/%'`) with minimal I/O overhead.
-
-### 3. Inside a Single Space Database (SQL Schema Topology)
-To support our 6-stage cognitive pipeline without overloading tables or corrupting provenance, every `{space_id}.db` file contains exactly these relational tables:
-* **`episodes`**: Immutable archive of raw input text, timestamps, and namespace paths (`id, content, source, occurred_at, namespace`).
-* **`facts`**: Extracted atomic entity-relationship triples and assertions (`id, subject_id, predicate, object_id, context, extracted_at, extractor_version`).
-* **`evidence`**: Support linkage and observation metadata linking facts to episodes (`id, fact_id, episode_id, confidence, authority_level, observed_at, context`).
-* **`beliefs`**: Authoritative temporal identity assertions (`id, subject_id, predicate, object_id, confidence, status, valid_from, valid_to, lambda, authority_level`).
-* **`belief_evidence`**: Many-to-many junction mapping evidence rows to beliefs (`belief_id, evidence_id, support_type`).
-* **`insights`**: High-order reflected patterns generated by the LLM Reflection Engine (`id, statement, confidence, status, generated_at, invalidated_at, reflection_version`).
-* **`insight_support`**: Evidence weighting mapping facts to insights (`insight_id, fact_id, weight`).
-* **`fact_embeddings`**: Virtual table powered by **`sqlite-vec`** storing 1536-dimensional vectors for fast cosine similarity search.
-* **`facts_fts`**: Virtual table powered by **SQLite FTS5** for ultra-fast BM25 keyword matching.
-* **`edges`**: Relational adjacency table mapping graph connections (`updates`, `extends`, `derives`, `applies_to`, `contradicts`).
-* **`wiki_sections`**: Compiled Markdown sections, version counters, and provenance flags.
-
----
-
-## 5. Concurrency Control & SQLite Lock Defenses
-
-Because SQLite enforces **file-level locking** (`EXCLUSIVE` lock on the `.db` file during write transactions), simultaneous write attempts from Process 1 (API) and Process 2 (Worker) can trigger `SQLITE_BUSY` contention. Whimsync implements a **4-Layer Defense Protocol** to guarantee lock-free concurrency and data integrity:
-
-### Layer 1: SQLite WAL Mode (Write-Ahead Logging)
-Every SQLite database is initialized with `PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL; PRAGMA busy_timeout = 5000;`. In WAL mode, **readers do not block writers, and writers do not block readers**. Process 2 can execute a deep graph walk without blocking Process 1 from reading facts.
-
-### Layer 2: Sole-Writer Architecture (Single-Server Mitigation)
-To prevent physical SQLite file-lock collisions (`SQLITE_BUSY`) when running two containers (FastAPI and Worker) locally, **FastAPI (Process 1) is designated as the sole SQLite writer**. Because separate `asyncio.Queue` instances across two Docker containers cannot serialize writes to a shared disk file, the Cognitive Worker (Process 2) performs heavy read-only ML extraction and synthesis, sending all database mutation commands back to FastAPI via Redis Streams or an internal mutation endpoint (`PUT /internal/spaces/{id}/mutate`).
-
-### Layer 3: Strict Domain Mutation Authority Contracts
-All physical SQL write statements are executed exclusively by **FastAPI (Sole Writer)** in local/VPS mode and by the **Space Durable Object** in Cloudflare mode. To guarantee zero logical write-write data collisions within the sole writer's command router, services hold exclusive **Domain Mutation Authority** (logical mutation ownership) over specific tables:
-
-| Table / Rows | Domain Mutation Authority | Purpose |
-|---|---|---|
-| `episodes` | ⚡ Fast-Core API Only | Append raw user input archives |
-| `facts` & `evidence` | ⚡ Fast-Core API Only | Insert newly extracted atomic facts and observation linkage |
-| `fact_embeddings` | ⚡ Fast-Core API Only | Insert vector embeddings for new facts |
-| `beliefs` & `belief_evidence` | 🧠 Deep-Brain Worker + 👤 Human | Manage temporal identity assertions & support |
-| `insights` & `insight_support` | 🧠 Deep-Brain Worker Only | Generate high-order reflected patterns |
-| `edges` | 🧠 Deep-Brain Worker Only | Connect graph relationships & contradictions |
-| `wiki_sections` | 🧠 Deep-Brain + 👤 Human Edits | Compile Markdown wiki summaries |
-
-### Layer 4: Human Supremacy & Optimistic Concurrency Control (OCC)
-When updating the Wiki or Beliefs layer, the Cognitive Worker must obey two rules:
-1. **Belief-Level Human Supremacy:** Authority belongs to individual assertions/beliefs (`USER_PINNED`, `USER_CONFIRMED`), not whole wiki page rows. When a human edits a section of the Markdown Wiki, our Semantic Diff Engine translates the change into authoritative belief mutations (`USER_PINNED (Level 6)`). The machine worker is architecturally forbidden from overwriting pinned beliefs, but can still update adjacent machine-inferred bullet points in the same wiki section!
-2. **Optimistic Version Checking:** When compiling a section, the worker executes:
-   ```sql
-   UPDATE wiki_sections
-   SET content = :new_text, version = version + 1, updated_at = :now
-   WHERE section_key = :key AND version = :expected_version;
-   ```
-   If a human edited the section while the LLM was compiling, `affected_rows == 0`. The worker discards its stale compilation and retries on the next cycle.
-
----
-
-## 6. Cost Optimization: Model Tiering & Event-Driven Thermostat
-
-To prevent LLM API token bills from exploding during high-throughput chat sessions while ensuring active coding agents receive instant reflection, Whimsync replaces blind continuous polling with two strict cost-reduction mandates:
-
-### 1. Event-Driven Thermostat (Deterministic Eligibility Logic)
-Instead of firing an LLM reflection call every time 5 facts accumulate, or waiting blindly for a 4-hour clock timer, the Deep-Brain Cognitive Worker evaluates a clean, deterministic eligibility rule on every batch:
-$$\text{Eligible} = (\text{NewFacts} \ge N) \lor (\text{UnresolvedContradictions} \ge C) \lor (\text{OldestUnprocessedFactAge} \ge T)$$
-
-* **Active Threshold:** For Phase 1, we default to $N=5$, $C=1$, $T=4\text{ hours}$. When an active agent generates a burst of novel facts or a contradiction is detected, reflection enqueues immediately!
-* **Telemetry & Future Weighting:** After collecting real production distributions, this deterministic gate will evolve into a weighted eligibility score incorporating cluster density and idle ratios.
-* **Idle Safety Net:** If an agent is inactive, the system hibernates ($0 cost). A scheduled cron trigger acts as a background safety net to sweep and compile slow-drip memories.
-
-### 2. Strict Model Tiering & Two-Gate Novelty Checking
-We divide AI tasks by complexity, assigning zero-cost models to high-frequency tasks:
-
-| Task Layer | Execution Frequency | Model Assigned | Estimated Cost per 1k Ops (To Validate via Benchmarks) |
+| Field | Nullable? | Default if omitted | Job |
 |---|---|---|---|
-| **Gate 1: Cheap Lexical Novelty** | High (Every write) | **In-Memory LSH Index** (`datasketch` SimHash/MinHash) | **$0.00** (Local CPU/RAM) |
-| **Entity Recognition (NER)** | High (Novel writes) | **GLiNER** (`gliner-small-v2.1` in local RAM) | **$0.00** (Local CPU/RAM) |
-| **Gate 2: Semantic Novelty** | High (Post-NER) | **Vector Embedding & Predicate Comparison** | **$0.00** (Local CPU) |
-| **Atomic Fact Extraction** | Medium-High (Novel writes) | **Local SLM** (Qwen-2.5-1.5B / Phi-3-mini) *OR* Claude 3.5 Haiku fallback | **$0.00** (Local) or **~$0.05** (Haiku API target) |
-| **Contradiction Classifier** | Medium (Eligible batches) | **Local SLM** / Claude 3.5 Haiku | **~$0.02** (Target) |
-| **Wiki & Belief Synthesis** | Low (Eligible batches only) | **Claude 3.5 Haiku** (Anthropic API) | **~$0.15** (Target) |
+| `tenant_id` | No | none — must be explicit | **Security boundary.** Every claim belongs to exactly one org, always. |
+| `namespace` | **No** | `"default"` | **The real access-control + isolation unit.** Memories can't exist outside a namespace; the default value exists purely for caller convenience, the column is never empty. |
+| `user_id` | No | none — must be explicit | **Authorship only.** States who/what created the claim. Does not gate access by itself. |
+| `entity_key` | **Yes** | none | Dev-facing scoping tag for a subject, e.g. `customer:123`. Genuinely absent is a valid state — not every claim is about a tracked subject. |
+| `session_id` | **Yes** | none | Lifecycle tag. Genuinely absent is valid — not every interaction is session-bounded. |
 
-By handling 80%+ of daily workload via local regex, LSH, GLiNER, and local Small Language Models (SLMs), Whimsync's operating cost design target is **<$0.20 per active user/month (to be validated through benchmarks)**.
+**Validation rule:** `entity_key` without `namespace` is rejected or coerced to `namespace="default"`.
 
----
+**Retrieval default:** narrowest supplied field wins, gated first by whether the requesting `user_id` has `read` on that `namespace` at all.
 
-## 7. The Definitive Technology Stack & Rationales
+### Org membership & namespace permissions
 
-| Component | Technology Choice | Why This Is the Exact Right Choice |
+| Table | Fields |
+|---|---|
+| `orgs` | `id` (= `tenant_id`), `name`, `created_at` |
+| `org_memberships` | `org_id`, `user_id`, `role` (`admin`\|`member`), `joined_at` |
+| `namespaces` | `org_id`, `name`, `created_at` |
+| `namespace_permissions` | `org_id`, `namespace`, `user_id`, `can_read`, `can_write` |
+
+**Access rules:**
+- `role: owner` → exactly one per org, always. The creator is Owner at signup. Full control including irreversible org-level actions: delete the org, transfer ownership, change billing/plan, override or demote any Admin. An org must always have exactly one Owner — leaving requires transferring ownership first (or deleting the org, if solo).
+- `role: admin` → full read/write on every namespace in the org, automatically. No ACL rows needed; the check is bypassed entirely. Can manage members (invite, remove, promote/demote to Admin) and create namespaces if org policy allows. Cannot delete the org, change billing, or remove/demote the Owner.
+- `role: member` → **default-deny.** Zero namespace access until an admin explicitly grants rows in `namespace_permissions`. A member can be granted full access (every namespace) or restricted per-namespace read/write. No org- or membership-management capability.
+- A personal org has exactly one member (its creator, `admin`), so every namespace inside it is private by construction — no special-case flag needed. Privacy in a multi-member org works the same way: create a namespace only specific members have access to.
+- Namespaces a member has no `read` access to are simply **hidden** — not listed, not discoverable, no partial-visibility state to reason about. Simpler than a separate discoverability flag; revisit only if a concrete "request access to something you know exists" need shows up.
+
+**Namespace creation:**
+
+| Question | Rule |
+|---|---|
+| Who can create a namespace? | Org setting, default `admins_only` |
+| What does the creator get? | Auto-granted `can_read: true, can_write: true` |
+| What do members get by default? | Nothing — explicit grant required |
+
+**No cross-namespace relationships.** `memory_relationships` and `entity_relationships` edges only ever connect claims within the same namespace. A namespace is the isolation boundary; an edge crossing it would leak the existence of a claim into a scope the requester may not have access to, even without exposing its content. Extraction simply never proposes cross-namespace edges.
+
+**Conversation vs. session vs. user memory (lifetime framing, not separate stores):**
+
+| Layer | Where it lives | Lifetime |
 |---|---|---|
-| **Language & Runtime** | **Python 3.12+** | 95% of the AI/ML ecosystem (GLiNER, LSH, Numpy, LLM SDKs) is native to Python. With Python 3.12 `asyncio` and Rust-backed tooling, we get sub-millisecond execution without IPC bridge headaches. |
-| **Package & Env Manager** | **`uv`** (by Astral) | 10–100x faster than pip/poetry. Guarantees deterministic lockfiles, instant virtual environment creation, and ultra-fast Docker builds. |
-| **API Framework** | **FastAPI + Pydantic v2** | Async-native, automatic OpenAPI schema generation, sub-millisecond data validation (Rust-powered Pydantic v2), and native WebSocket/SSE streaming support. |
-| **Primary Storage Engine** | **SQLite 3.45+ (`sqlite-vec`)** | Storing data per-space on local NVMe SSDs eliminates network round-trips. `sqlite-vec` runs vector cosine similarity, while FTS5 handles BM25 keyword search. |
-| **Working Memory & Queue** | **Redis 7+ (Valkey)** | Powers T1 ephemeral working memory (session TTLs), caches the pre-compiled User Profile JSON for rapid API retrieval, and drives Redis Streams for epoch job queues. |
-| **Fast-Path Filter** | **Python Regex + Redis Sets** | Sub-microsecond interception of low-entropy chatter (e.g., *"ok"*, *"thanks"*, *"hello"*), bypassing ML inference entirely for 40–60% of inputs. |
-| **Gate 1: Lexical Novelty** | **In-Memory LSH (`datasketch`)** | SimHash / MinHash Locality-Sensitive Hashing identifies exact or near-lexical duplicate strings in sub-milliseconds without executing disk/vector DB searches. |
-| **Entity Extraction (NER)** | **GLiNER** (`gliner-small-v2.1`) | Fast, open-source, zero-shot entity recognition running locally to tag subjects and objects before atomic fact extraction. |
-| **Fact Extraction Model** | **Qwen-2.5-1.5B / Phi-3** | Open-source Small Language Models running locally in RAM to extract atomic JSON triples without burning paid API tokens. |
-| **Embedding Model** | **`text-embedding-3-small` / Nomic** | OpenAI API for zero-ops cloud deployment; clean abstraction layer allows self-hosters to swap in local Nomic-Embed or Ollama models. |
-| **Reflection & Wiki LLM** | **Claude 3.5 Haiku (Anthropic API)** | The industry's fastest, most cost-effective model capable of strict schema-grounded contradiction classification and multi-document synthesis during scheduled batches. |
-| **Observability** | **OpenTelemetry + Grafana** | Mandatory from line 1. Traces every request across API and Worker processes. Provisioned Grafana dashboards monitor queue depth, token budgets, and cost-per-user. |
+| Conversation | Not stored — the raw in-flight buffer before extraction runs | Single turn |
+| Session | A claim tagged with `session_id` | Minutes–hours, expires unless promoted |
+| User / Org | A claim in a namespace, `session_id` null | Persists indefinitely; visibility governed entirely by namespace permissions |
 
 ---
 
-## 8. The 6-Stage Canonical Cognitive Hierarchy (L0–L5)
+## 2. Extraction & storage pipeline
 
-Whimsync structures memory into six evolutionary stages. Memory progresses from raw episodic archives upward through strict corroboration and reflection, ensuring extraction noise never contaminates user identity:
-
-```
-L0: Experience / Episode     Raw conversational text, tool output, or event stream.
- (Immutable Storage)         "I refactored the sync database module to async SQLite WAL today."
-                                │
-                                ▼ [Extraction: NER + SLM Triples]
-                                │
-L1: Fact                     Atomic entity-relationship assertion.
- (Atomic Triple)             [Adnan] -> [refactored] -> [database module to async SQLite WAL]
-                                │
-                                ▼ [Support Linkage: Observation Metadata]
-                                │
-L2: Evidence                 Explicit support row linking Fact to Episode with confidence score.
- (Attribution Linkage)       Confidence: 0.95 | Authority: Level 4 (User Stated) | Time: Week 1
-                                │
-                                ▼ [Reconciliation & Temporal Decay λ]
-                                │
-L3: Belief                   Authoritative, deduplicated temporal identity state.
- (Synthesized Truth)         Subject: [Adnan] | Predicate: [prefers] | Object: [async SQLite WAL]
-                             Status: ACTIVE | Valid From: Week 1 | Decay Rate λ = 0.0005
-                                │
-                                ▼ [Evidence Gate: ≥5 facts across ≥2 distinct time periods]
-                                │
-L4: Insight                  High-order reflected behavioral or architectural pattern.
- (Reflected Pattern)         "Adnan consistently prioritizes non-blocking execution and local-first
-                             simplicity over distributed cloud complexity." (Confidence: 0.92)
-                                │
-                                ▼ [Compilation: Human & Machine Consumption]
-                                │
-L5: Context Projection       Read-only projections generated from L3 Beliefs & L4 Insights:
- (Inspectable State)         ├── Modular Markdown Wiki (`wiki/technical_stack.md`)
-                             ├── Pre-compiled Profile JSON (`GET /v1/profile`)
-                             └── Retrieval Context Window (Hybrid Search Injection)
+```mermaid
+flowchart LR
+    A[Raw message] --> B[Store raw episode]
+    B --> C[Return 200 OK]
+    B --> D[BG: single LLM call]
+    D --> E[Claims + relationships<br/>+ quintuplets + mutations]
+    E --> F[Embed]
+    F --> G[Store: status = pending_review]
+    G --> H[Mutation evaluation<br/>vs existing claims]
+    H --> I[Atomic flip:<br/>active / superseded]
 ```
 
-### Cognitive Processing Responsibilities & Execution Matrix
-Whimsync remains primarily a structured data and cognition system with controlled model calls, not an uncontrolled LLM pipeline:
+**Single LLM call produces, in one structured response:**
+- New memory claims (content, kind, confidence)
+- `memory_relationships` edges between claims (UPDATES, EXTENDS, SUPPORTS, CONTRADICTS, DERIVES, MENTIONS)
+- `entity_relationships` quintuplets (subject, predicate, object, scope, rationale)
+- Proposed mutations against candidate prior claims (update / delete / noop)
 
-| Cognitive Responsibility | Execution Engine / Model | Why Controlled / Deterministic |
+**Why a single call, not split extraction/mutation:** mutation evaluation needs candidate prior claims, and candidate retrieval uses hybrid search (vector + FTS + entity_key + recency) on the **raw episode**, which happens *before* the LLM call using already-existing indices — not on the new claim's own embedding, which doesn't exist yet. So there's no ordering problem: fetch candidates from the episode → one call proposes claims + edges + quintuplets + mutations against those candidates together → embed the new claims afterward, purely for future retrieval. A split two-call design is a legitimate later experiment if single-call mutation accuracy proves unreliable in practice, but not worth building speculatively now.
+
+**Why `pending_review` matters:** writing a new claim as immediately `active` before mutation evaluation runs creates a window where the new claim and the stale claim it's about to supersede are both retrievable — a live query could return a contradiction. `pending_review` claims are durably written (nothing is lost on a worker crash) but never surfaced to retrieval until the mutation-evaluation transaction resolves and atomically flips both the new claim to `active` and the superseded claim to `superseded`.
+
+**Episodes vs. evidence:** `episodes` is the raw material — one immutable row per ingested message/document, existing independent of whether anything was ever extracted from it (plenty of episodes produce zero claims). `evidence` is the citation trail — a join row linking a specific claim to a specific offset range in a specific episode. Many-to-many: one claim can cite several episodes, one episode can support several claims.
+
+---
+
+## 3. Data schema
+
+```mermaid
+erDiagram
+    ORGS ||--o{ ORG_MEMBERSHIPS : "has"
+    ORGS ||--o{ NAMESPACES : "contains"
+    NAMESPACES ||--o{ NAMESPACE_PERMISSIONS : "grants"
+    EPISODES ||--o{ EVIDENCE : "source of"
+    MEMORY_CLAIMS ||--o{ EVIDENCE : "cites"
+    MEMORY_CLAIMS ||--o{ MEMORY_RELATIONSHIPS : "source/target"
+    MEMORY_CLAIMS ||--o{ ENTITY_RELATIONSHIPS : "extracted from"
+    ENTITIES ||--o{ ENTITY_RELATIONSHIPS : "subject/object"
+    MEMORY_CLAIMS ||--o| VECTORS : "embedded as"
+
+    ORGS {
+        uuid id PK
+        string name
+        timestamp created_at
+    }
+    ORG_MEMBERSHIPS {
+        uuid org_id FK
+        string user_id
+        string role
+        timestamp joined_at
+    }
+    NAMESPACES {
+        uuid org_id FK
+        string name
+        timestamp created_at
+    }
+    NAMESPACE_PERMISSIONS {
+        uuid org_id FK
+        string namespace
+        string user_id
+        bool can_read
+        bool can_write
+    }
+    EPISODES {
+        uuid id PK
+        string raw_text
+        string user_id
+        string session_id
+        timestamp created_at
+    }
+    MEMORY_CLAIMS {
+        uuid id PK
+        string tenant_id
+        string user_id
+        string namespace
+        string entity_key
+        string session_id
+        text content
+        string kind
+        string status
+        float confidence
+        string_array categories
+        string content_hash
+        jsonb metadata
+        timestamp occurred_at
+        timestamp recorded_at
+        timestamp updated_at
+    }
+    MEMORY_RELATIONSHIPS {
+        uuid id PK
+        uuid source_claim_id FK
+        uuid target_claim_id FK
+        string relation
+        float confidence
+        string reason
+        string tenant_id
+        string namespace
+        timestamp valid_at
+        timestamp invalid_at
+        timestamp tx_created_at
+        timestamp tx_expired_at
+    }
+    ENTITIES {
+        uuid id PK
+        string canonical_name
+        string type
+        string_array aliases
+        string user_id
+        string tenant_id
+        string namespace
+        timestamp first_seen_at
+        timestamp last_seen_at
+    }
+    ENTITY_RELATIONSHIPS {
+        uuid id PK
+        uuid subject_entity_id FK
+        string predicate
+        uuid object_entity_id FK
+        string object_literal
+        string scope
+        string rationale
+        uuid source_claim_id FK
+        float confidence
+        timestamp valid_at
+        timestamp invalid_at
+        timestamp tx_created_at
+        timestamp tx_expired_at
+    }
+    EVIDENCE {
+        uuid id PK
+        uuid claim_id FK
+        uuid episode_id FK
+        int start_offset
+        int end_offset
+        string excerpt
+        float confidence
+        timestamp created_at
+    }
+    VECTORS {
+        uuid id PK
+        string entity_type
+        uuid entity_id
+        vector embedding
+    }
+```
+
+### Notes on key tables
+
+- **`memory_relationships`** — governs claim-to-claim lifecycle (how understanding evolved). `tenant_id`/`namespace` are denormalized onto the edge for cheap access-filtered traversal (avoids a join back to claims on every graph query). Both endpoints always share the same `namespace` — no cross-namespace edges.
+- **`entity_relationships` (quintuplets)** — subject, predicate, object, scope, rationale. Governs semantic fact structure (what is actually known about how X relates to Y), extracted from claim content, distinct from claim lifecycle. Same no-cross-namespace rule applies.
+- **Edge lifecycle rule:** on claim supersession, close `SUPPORTS`/`CONTRADICTS` edges (`tx_expired_at = now`) since they describe current truth. Never close `UPDATES`/`DERIVES` edges — they're lineage, not current-truth statements.
+- **Evidence** — many-to-many between claims and episodes. Stores character offsets into the immutable episode text as source of truth (the `excerpt` string is a rendering cache, not authoritative). Written in the same atomic transaction as the claim it supports — never after.
+
+---
+
+## 4. Timestamps
+
+Three distinct fields, never collapsed into one:
+
+| Field | Meaning | Set by |
 |---|---|---|
-| **Noise Filtering** | **Deterministic Regex** | Sub-millisecond rejection of low-entropy chatter (<1ms). |
-| **Lexical Novelty (Gate 1)** | **Deterministic LSH (`datasketch`)** | SimHash / MinHash identifies exact or near-lexical duplicates without DB lookups. |
-| **Entity Recognition (NER)** | **GLiNER (`gliner-small-v2.1`)** | Fast, local zero-shot NER in RAM without burning LLM tokens. |
-| **Fact Extraction** | **SLM or LLM** | Structured JSON schema extraction (Qwen/Phi locally or Claude 3.5 Haiku API fallback). |
-| **Evidence Creation** | **Deterministic** | Explicit support row linking Fact to Episode with observation metadata. |
-| **Conflict Candidate Detection** | **Deterministic Graph Query** | SQL/vector comparison detecting predicate/entity overlap. |
-| **Simple Belief Reconciliation** | **Deterministic Rules** | Direct temporal override / corroboration logic. |
-| **Ambiguous Contradiction Classification** | **LLM (Claude 3.5 Haiku)** | Invoked only when deterministic rules cannot resolve nuanced semantic drift. |
-| **Reflection & Insight Generation** | **LLM (Claude 3.5 Haiku)** | High-order pattern synthesis executed during eligible batches ($\text{Score} \ge 10$). |
-| **Profile JSON** | **Deterministic Builder** | Fast relational query compiled directly from `ACTIVE` beliefs. |
-| **Agent Context Assembly** | **Deterministic Retrieval** | FTS + vector + graph query injection into agent prompt. |
-| **Basic Markdown Wiki** | **Deterministic Templates** | Section structured rendering from `wiki_sections` and beliefs. |
-| **High-Level Natural Wiki Summaries** | **Optional LLM Synthesis** | Human-readable narrative compilation during eligible reflection batches. |
+| `occurred_at` | When the fact was actually true in the world | User/LLM-supplied, optional, accepts unix epoch, `YYYY-MM-DD`, or ISO datetime |
+| `recorded_at` | When the row was first written | System, immutable |
+| `updated_at` | When the row last changed | System, bumped on every mutation |
+
+Precompute `structured_attributes` (day, month, year, quarter, day_of_week, is_weekend) from `occurred_at` at write time — turns "everything from last weekend" into an indexed equality filter instead of date math at read time.
+
+**Relationship/quintuplet bitemporal pair** (separate from the above): `valid_at`/`invalid_at` (event time — was it ever true) vs `tx_created_at`/`tx_expired_at` (transaction time — do we currently believe it). Keeps "what was true on date X" answerable independently of "what did the system believe on date X."
 
 ---
 
-## 9. Deployment & Horizontal Scaling Topology
+## 5. Metadata vs. filter properties
 
-Whimsync is designed to deploy natively as a self-contained monolith, while providing an edge-native cloud upgrade path without changing SQL schema or query structure:
-
-### 1. Single-Node Deployment: Local Development, Self-Hosted, and Early SaaS
-* **Infrastructure:** A single Linux VPS (suggested initial hardware target: 8 vCPU / 16 GB RAM NVMe SSD) or AWS EC2 instance running Docker Compose.
-* **Execution:** Process 1 (FastAPI) and Process 2 (Worker) share local NVMe disk access to `/data/spaces/{space_id}.db` files. Redis Valkey runs in RAM. Our **Sole-Writer Architecture** (Process 1 owns SQLite mutations) prevents physical file-lock contention (`SQLITE_BUSY`).
-
-### 2. Horizontal Cloud Scale (Edge-Native Durable Objects)
-When deploying across global edge networks where local NVMe drives cannot be shared across pods, Whimsync migrates its execution layer to **Cloudflare Durable Objects with Embedded SQLite**:
-* Each Cognitive Space (`/spaces/{space_id}`) maps 1-to-1 to a globally unique Durable Object **geographically provisioned close to where it is initially requested**. Because DOs are strictly **single-threaded**, database lock contention is physically impossible.
-* **Retrieval Portability Adapter:** While domain semantics remain 100% portable across cloud and local modes, physical vector search is abstracted behind a `RetrievalPort`. Local deployments use `LocalRetrievalAdapter` (`sqlite-vec` + FTS5 + recursive CTEs), while Cloudflare deployments use `CloudflareRetrievalAdapter` (DO Embedded SQLite + FTS5 + Workers AI or external vector index).
+- **Indexed columns** — anything filtered on constantly: `user_id`, `namespace`, `entity_key`, `session_id`, `kind`, `status`, `categories`.
+- **`metadata` (JSONB)** — freeform, app-specific, occasional filters. Slower (JSON containment queries) but flexible.
 
 ---
 
-## 10. Pragmatic Build Phases (Roadmap)
+## 6. Storage tiers
 
-We build in three rigorous, production-ready phases:
+Storage relies on a unified Postgres architecture combined with an object store for cold archiving.
 
-### Phase 1: The High-Speed Core (Weeks 1–4)
-*Goal: Deliver a rock-solid memory engine targeting sub-15ms retrieval SLAs with sole-writer concurrency, two-gate novelty checking, and read-your-writes asynchronous ingestion.*
-* [ ] Monorepo setup with `uv`, FastAPI skeleton, and OpenTelemetry instrumentation.
-* [ ] Sole-writer SQLite connection manager with WAL mode initialization, FTS5 tables, `sqlite-vec` vector embeddings, and our complete 11-table schema (`episodes, facts, evidence, beliefs, belief_evidence, insights, insight_support, edges, fact_embeddings, facts_fts, wiki_sections`).
-* [ ] Fast-Path regex heuristic filter and Gate 1 in-memory LSH lexical novelty pre-checker.
-* [ ] Atomic Fact Extractor integrating local GLiNER NER and SLM triples with Gate 2 semantic novelty checking.
-* [ ] Single-DB Hybrid Search engine combining vector cosine similarity, BM25 keyword matching, and 2-hop recursive CTE graph walks with a "read-your-writes" policy across committed facts and unprocessed episodes.
-* [ ] Asynchronous ingestion endpoint (`POST /v1/memories` executing fast-path $\rightarrow$ Gate 1 LSH $\rightarrow$ episode persistence $\rightarrow$ queue push $\rightarrow$ instant `202 Accepted`).
-* [ ] Instant GDPR hard-deletion pipeline (`DELETE /v1/space/{id}` removing SQLite file, flushing Redis, and logging receipt).
+| Tier | Backing store | Design |
+| --- | --- | --- |
+| **Hot + Warm** | Postgres + pgvector (Cloud SQL / Neon in the cloud, a Postgres container self-hosted) | Same Postgres database, same tables; `namespace`/`tenant_id` are just columns, not separate databases. |
+| **Cold** | S3-compatible object store: R2 or a cloud provider's own (cloud), MinIO (self-hosted) | Genuinely different backend — exported, physically removed from Postgres to keep it lean. |
 
-### Phase 2: The Cognitive Engine (Weeks 5–10)
-*Goal: Activate the Deep-Brain Cognitive Worker to generate understanding, resolve contradictions, and compile the human-editable Wiki.*
-* [ ] Event-Driven Thermostat (`main_worker.py`) evaluating deterministic eligibility thresholds ($\text{NewFacts} \ge 5 \lor \text{Contradictions} \ge 1 \lor \text{Age} \ge 4\text{h}$) with backup cron sweep.
-* [ ] Evidence Gate implementation validating $\ge 5$ supporting facts across $\ge 2$ distinct time periods before promoting facts to high-order insights.
-* [ ] Claude 3.5 Haiku Reflection Engine generating Insight Nodes and pruning superseded facts during eligible batches.
-* [ ] Batch Contradiction Classifier sorting conflicts into `preference_change`, `context_shift`, `temporal_update`, and `direct_contradiction`.
-* [ ] Markdown Wiki compiler converting SQLite sections into human-readable documents (`GET /v1/wiki`).
-* [ ] Belief Reconciliation Engine with category-specific temporal decay rates ($\lambda$) updating belief confidence over time.
-* [ ] Human edit reconciliation endpoint (`PATCH /v1/wiki`) translating manual text edits into authoritative belief mutations (`USER_PINNED`) with OCC version checking.
+**Tenant isolation:** A plain `WHERE tenant_id = ?` filter, backed by an index on `tenant_id`, provides practical isolation. If a single org's volume outgrows one instance, the standard Postgres answer is partitioning by `tenant_id`.
 
-### Phase 3: Ecosystem Scale & Edge Deployment (Weeks 11–16)
-*Goal: Prepare Whimsync for massive scale, edge deployment via Cloudflare Durable Objects, and external ecosystem integration.*
-* [ ] Abstraction layer implementation for `RetrievalPort`, supporting **Cloudflare Durable Objects with Embedded SQLite** as a serverless cloud adapter.
-* [ ] Comprehensive evaluation benchmark suite measuring Long-Context Recall (>96%), Multi-Hop Reasoning (>95%), Contradiction Precision (>90%), and Cost-per-User accuracy against LOCOMO and LongMemEval datasets.
-* [ ] Edge ontology schema evolution tooling (justifying new relationship types after 30 days of observation in the `related_to` catch-all bucket).
-* [ ] Production Docker Compose and Kubernetes Helm charts with Grafana operational dashboards pre-configured.
+**Read-path implication:** A query needing cold data must say so explicitly, triggering an on-demand rehydrate from object storage back into Postgres. Cold is a deliberate move.
+
+**Transition triggers:**
+
+* Write → always included in default (hot) queries.
+* Status flip to `superseded`/`deleted` → immediately excluded from default (warm) queries.
+* `active`, no read/write in N days → scheduled sweep flags as warm.
+* `session_id`-scoped claims → auto-`expiration_date`, expires unless mutation evaluation promotes the fact to a `session_id: null` durable claim.
+* Namespaces with more than one member with access → stay in default (hot) query scope regardless of any single member's access recency.
+* Cold → deliberate move only (age threshold, explicit archive, or compliance export), executed as an actual export-and-delete job against Postgres.
 
 ---
 
-## 11. Future Add-Ons Architecture (Connectors & MCP)
+## 7. Technology stack
 
-Because Whimsync is built on a clean, space-scoped storage foundation and a modular ingestion pipeline, future ecosystem add-ons slot cleanly on top of the base engine without touching the core:
+| Layer | Technology | Rationale & Architecture Role |
+| --- | --- | --- |
+| **Language & Runtime** | **TypeScript on Bun** | High-performance, low-latency execution with built-in TypeScript support. Unified codebase across API handlers, access-control logic, and background extraction workers. |
+| **Backend HTTP Layer** | **Hono** | Ultra-lightweight web framework running natively on Bun. Provides clean API routing, validation hooks, and portable standards-based request/response handling. |
+| **Frontend App / UI** | **Next.js (React)** | Powers the user dashboard, org/tenant management interface, namespace exploration, and developer console. |
+| **Authentication & Identity** | **Google Sign-In (OAuth 2.0 / OIDC)** | Sole authentication provider for v1. On successful Google Sign-In, the backend maps the verified Google identity (`sub` / email) to `user_id`, auto-provisions a default personal `org` if new, and issues stateless signed JWTs or HTTP-only session cookies. |
+| **Primary Database** | **PostgreSQL + `pgvector`** | Authoritative store for relational facts, evidence citations, full-text search (`FACTS_FTS`), and vector similarity search. |
+| **Queue Engine** | **Redis + BullMQ** | Handles asynchronous job orchestration for background LLM extraction, mutation evaluation, and scheduled sweeps. |
+| **Cold Storage** | **S3-Compatible Object Store** | MinIO (self-hosted) or AWS S3 / Cloudflare R2 (cloud) for cold archive exports. |
 
-```
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                             EXTERNAL ECOSYSTEM ADD-ONS                           │
-│                                                                                  │
-│  ┌─────────────────────────────┐         ┌────────────────────────────────────┐  │
-│  │   DATA CONNECTORS           │         │   MODEL CONTEXT PROTOCOL (MCP)     │  │
-│  │ • Slack / Discord Bots      │         │ • Claude Desktop / Cursor Server   │  │
-│  │ • Notion / GitHub Sync      │         │ • Tools: memory_add, memory_search │  │
-│  │ • IDE Extension Watchers    │         │ • Resources: whimsync://wiki/{id}  │  │
-│  └──────────────┬──────────────┘         └─────────────────┬──────────────────┘  │
-└─────────────────┼──────────────────────────────────────────┼──────────────────┘
-                  │ (HTTP POST /memory/add)                  │ (JSON-RPC 2.0 / stdio)
-                  ▼                                          ▼
-┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
-│                             WHIMSYNC BASE ENGINE (FAST-CORE API & WORKER)                        │
-│  Fast-Path ─► Gate 1 LSH ─► Persist Episode ─► Queue ─► Worker ─► Sole Writer ─► SQLite Space DB │
-└──────────────────────────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 1. Data Connectors (Slack, Notion, GitHub, IDEs)
-Connectors are lightweight external workers or cron jobs. They authenticate via standard API keys and push raw text or diffs directly to `POST /v1/memories` with explicit `space_id` ULID and appropriate namespace paths (e.g., `namespace: "/github/repo_whimsync/pulls"` or `namespace: "/slack/engineering_channel"`). The base engine handles fast-path filtering, episode storage, asynchronous extraction, and reflection automatically.
-
-### 2. Model Context Protocol (MCP) Server
-Whimsync will expose a standard **MCP Server** interface (via stdio or SSE) allowing instant integration with Claude Desktop, Cursor, Windsurf, and automated AI coding agents:
-* **MCP Tools Provided:** `memory_add`, `memory_search`, `get_user_profile`, `edit_wiki_section`.
-* **MCP Resources Provided:** `whimsync://spaces/{space_id}/wiki` (allowing agents to read the compiled Markdown Wiki directly into their context window as a live, evolving instruction system).
+### Authentication & Account Auto-Provisioning Flow
+1. **Sign in:** User authenticates via **Sign in with Google** on the Next.js frontend.
+2. **Identity verification:** Google OIDC token is verified by the Hono API service.
+3. **Org resolution:**
+   - **New User:** Automatically provisions an entry in `orgs` (`tenant_id`), assigns the user as `role: owner` in `org_memberships`, and creates the `"default"` namespace with full permissions.
+   - **Existing User:** Retrieves their existing `org_memberships` and default `tenant_id`.
+4. **Session token:** Issues an authenticated JWT/cookie containing verified `user_id` and active `tenant_id` for subsequent API requests.
 
 ---
 
-## 12. The 15 Architecture Principles to Preserve
+## 8. Infrastructure & deployment
 
-All developers and AI agents contributing to Whimsync must strictly obey these 15 foundational architecture principles:
-1. **Build the simplest deployable architecture first.**
-2. **Keep the initial Local/VPS deployment on one machine.**
-3. **Separate Fast-Core request handling from slow cognitive processing.**
-4. **Keep SQLite as authoritative long-term memory in Local/VPS mode.**
-5. **Keep Durable Object SQLite as authoritative Space state in Cloudflare mode.**
-6. **Use queues to decouple expensive processing.**
-7. **Maintain one physical mutation path per Space storage system.**
-8. **Keep cognitive/domain logic independent from infrastructure.**
-9. **Do not build automatic Space classification in the initial version.**
-10. **Do not introduce microservices prematurely.**
-11. **Scale the Worker independently when inference becomes the bottleneck.**
-12. **Treat the Wiki, Profile JSON, and Agent Context as projections of authoritative structured memory.**
-13. **Keep Space IDs permanent (`ULID`) and Space names editable.**
-14. **Every memory ingestion operation must explicitly target a Space (`space_id`).**
-15. **Preserve a clean migration path from single-VPS deployment to split Worker deployment and eventually Cloudflare deployment.**
+**Core principle:** Compute and database must sit on the same cloud provider. Retrieval is always synchronous and sits directly on the user-facing critical path, so avoiding cross-cloud network hops ensures ultra-low latency.
+
+### Self-Hosted Architecture
+
+The self-hosted environment is the exact same artifact as local development, running independently with zero external dependencies.
+
+* **Artifact:** A single `docker-compose.yml`.
+* **Compute:** Local app container running Hono on Bun. Background workers run as a separate dedicated container within this same compose network, consuming jobs independently of the main API process.
+* **Database:** Local Postgres container with pgvector.
+* **Queue:** Local Redis container running BullMQ for background jobs.
+* **Storage (Cold):** Local MinIO container.
+
+### Cloud Deployment Phases
+
+Cloud infrastructure scales through three phases, prioritizing ultra-low latency and cost-efficiency at every step.
+
+**Phase 1: Early Stage (Lean & Serverless)**
+
+* **Goal:** Keep costs near zero during idle periods while providing enterprise-grade latency when active.
+* **Provider:** AWS.
+* **Compute:** Amazon ECS Express Mode (auto-scaling container compute).
+* **Database:** Neon DB (serverless Postgres that scales to zero).
+* **Queue/Workers:** Amazon SQS triggering scale-to-zero background workers.
+
+**Phase 2: Mid Stage (Predictable Scale)**
+
+* **Goal:** Stabilize costs as constant traffic makes pay-per-use scaling less economical.
+* **Provider:** AWS or GCP.
+* **Compute:** AWS Fargate or GCP Cloud Run, maintaining baseline provisioned instances.
+* **Database:** Amazon RDS or GCP Cloud SQL (provisioned instances for predictable high-volume pricing).
+* **Queue/Workers:** SQS or GCP Pub/Sub push.
+
+**Phase 3: Top Tier (Enterprise)**
+
+* **Goal:** Maximum throughput, multi-tenant partitioning, and strict high availability.
+* **Compute:** Dedicated Kubernetes clusters (Amazon EKS or GKE).
+* **Database:** Provisioned RDS/Cloud SQL with dedicated Read-Replicas and `tenant_id` table partitioning.
+* **Queue/Cache:** Reintroduce managed Redis (ElastiCache or Memorystore) as a dedicated caching layer to protect the database from high-frequency reads.
 
 ---
-*Document Version: 1.1 — Master Specification*
-*Project Status: Active Development — Phase 1 Foundation*
-*Last Updated: July 2026*
+
+## 9. Deferred to next phase
+
+- Memory decay / automatic expiration policy
+- Retrieval strategy (per-use-case traversal: conversational, hierarchical/rollup, graph, tree/lineage)
+- Rollup/summarization background job (hierarchical memory)
+- Performance optimization pass
+- Additional consumer features (reflection generation, profile/agent context, wiki generation)
