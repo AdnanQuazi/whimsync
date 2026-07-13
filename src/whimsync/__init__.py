@@ -1,1 +1,0 @@
-# Whimsync source package

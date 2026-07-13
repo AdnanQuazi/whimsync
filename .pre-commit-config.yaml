@@ -6,14 +6,10 @@ repos:
       - id: end-of-file-fixer
       - id: check-yaml
       - id: check-added-large-files
-      - id: check-toml
+      - id: check-json
 
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.20
+  - repo: https://github.com/biomejs/pre-commit
+    rev: v1.9.4
     hooks:
-      # Run the linter with auto-fix and forced color
-      - id: ruff
-        args: [ --fix, --color=always ]
-      # Run the formatter with forced color
-      - id: ruff-format
-        args: [ --color=always ]
+      - id: biome-check
+        additional_dependencies: ["@biomejs/biome@1.9.4"]

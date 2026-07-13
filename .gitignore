@@ -1,39 +1,38 @@
-# Python / uv Virtual Environment
-.venv/
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
+# Dependencies
+node_modules/
+.bun/
+.pnp
+.pnp.js
+
+# Testing & Coverage
+coverage/
+*.lcov
+.nyc_output/
+
+# Next.js & Monorepo Build Outputs
+.next/
+out/
 build/
 dist/
-*.egg-info/
-.pytest_cache/
-.coverage
-htmlcov/
+.turbo/
+*.tsbuildinfo
 
 # Environment Variables & Secrets
 .env
 .env.*
 !.env.example
 
-# Whimsync SQLite Space Databases & Logs
+# Local Infrastructure & Docker Data Volumes
 data/
-*.db
-*.db-wal
-*.db-shm
-*.sqlite
-*.sqlite-wal
-*.sqlite-shm
+pgdata/
+minio_data/
+redis_data/
 *.log
 
-# IDEs & Editor Files
+# Editor & OS Files
 .vscode/
 .idea/
 *.swp
 *.swo
-*.tmp
-
-# OS Generated Files
 .DS_Store
 Thumbs.db

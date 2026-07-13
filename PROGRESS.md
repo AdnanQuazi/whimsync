@@ -1,66 +1,74 @@
-# Whimsync — Progress Tracker
+# Whimsync v1 — Development Progress Tracker
 
-> [!IMPORTANT]
-> **Early-Stage Development Notice:** This project is currently in active early-stage development and architectural planning. All documented architectures, data flow topologies, and performance latency targets (SLA metrics) represent design objectives and may evolve as implementation progresses.
-
----
-
-## 🟡 Phase 1: The High-Speed Core (CURRENT FOCUS)
-
-### Step 1: Tooling & Environment Setup (COMPLETED)
-- [x] Initialize Python 3.12+ project using `uv` (`pyproject.toml`).
-- [x] Add foundational core dependencies (`fastapi`, `pydantic>=2.0`, `redis`, `sqlite-vec`).
-- [x] Create simple `docker-compose.yml` to run background Redis Valkey on port 6379 for local development.
-- [x] Verify environment builds and Python can execute cleanly.
-
-### Step 2: Space-Scoped SQLite Manager (`/src/shared/db.py`) (COMPLETED)
-- [x] Implement async/sync connection pooler for `/data/spaces/{space_id}.db`.
-- [x] Enforce mandatory SQLite PRAGMAs (`journal_mode = WAL`, `synchronous = NORMAL`, `busy_timeout = 5000`).
-- [x] Implement initial core tables (`episodes`, `facts`, `fact_embeddings`, `facts_fts`, `edges`, `wiki_sections`, `identity`).
-- [x] Write integration test verifying WAL concurrent read/write behavior and `sqlite-vec` extension loading.
-
-### Step 3: Fast-Path Filter & Gate 1 Lexical Novelty (`whimsync/perception/`) (COMPLETED)
-- [x] Implement low-entropy regex bypass filter (`fast_path.py`) to intercept trivial chatter (<1ms target).
-- [x] Implement Gate 1 in-memory SimHash/MinHash LSH (`lsh_novelty.py` via `datasketch`) for cheap lexical deduplication.
-- [x] Write unit tests verifying immediate rejection of duplicate inputs without touching SQLite.
-
-### Step 4: 11-Table Schema Upgrade & Fact Extractor (`whimsync/perception/fact_extractor.py`) (NEXT UP)
-- [ ] **Schema Upgrade:** Migrate `db.py` to our canonical 11-table schema (`episodes`, `facts`, `evidence`, `beliefs`, `belief_evidence`, `insights`, `insight_support`, `edges`, `fact_embeddings`, `facts_fts`, `wiki_sections`) and enforce Sole-Writer mutation rules targeting permanent ULID `space_id` space databases (`/data/spaces/{space_id}.db`).
-- [ ] Integrate local GLiNER (`gliner-small-v2.1`) for zero-shot entity recognition.
-- [ ] Implement structured Pydantic schema for **Qualified Attributed Facts** (`Fact`, `Evidence`, and `Belief` schemas with confidence, authority, and context).
-- [ ] Implement Gate 2 semantic novelty checking and extraction wrapper supporting local SLMs (Qwen/Phi) and Claude 3.5 Haiku API fallback.
-- [ ] Write test verifying a verbose paragraph decomposes into attributed facts and evidence rows without overwriting user identity.
-
-### Step 5: Single-DB Hybrid Search (`/src/retrieval/hybrid_search.py`)
-- [ ] Implement cosine similarity vector search via `sqlite-vec` (with `RetrievalPort` adapter abstraction).
-- [ ] Implement BM25 keyword search via SQLite FTS5 (`facts_fts`).
-- [ ] Implement 2-hop recursive CTE graph traversal (`WITH RECURSIVE`).
-- [ ] Implement recency $\times$ confidence $\times$ tier reranker combining all three search signals.
-- [ ] Verify multi-space parallel query performance with read-your-writes policy (<15ms SLA target).
-
-### Step 6: Fast-Core API Server (`/src/main_api.py`)
-- [ ] Build FastAPI server (Sole SQLite Writer) with OpenTelemetry tracing instrumentation.
-- [ ] Implement Space Management & ULID resolution (provisioning default `My Space` for new users; allowing manual named space creation).
-- [ ] Implement `POST /v1/memories` requiring explicit `space_id` ULID (Fast-Path $\rightarrow$ Gate 1 LSH $\rightarrow$ Episode insert $\rightarrow$ Queue push $\rightarrow$ Instant `202 Accepted`).
-- [ ] Implement `POST /v1/memories/search` (Query Router $\rightarrow$ Parallel Hybrid Search across committed facts + unprocessed episodes).
-- [ ] Implement `GET /v1/wiki` reading relational markdown sections.
-- [ ] Implement instant GDPR deletion endpoint (`DELETE /v1/space/{id}`).
+> **Engineering Roadmap & Step-by-Step Implementation Tracker**
 
 ---
 
-## ⚪ Phase 2: The Cognitive Engine (UPCOMING)
-- [ ] Step 7: **Event-Driven Thermostat & Eligibility Scoring** ($\text{Score} = 0.3 \times \text{NewFacts} + 1.5 \times \text{Contradictions}$).
-- [ ] Step 8: Evidence Gate ($\ge 5$ facts across $\ge 2$ distinct time periods).
-- [ ] Step 9: Claude 3.5 Haiku Reflection Engine (generating Insight Nodes).
-- [ ] Step 10: Belief Reconciliation Engine (`ACTIVE` vs. `HISTORICAL` temporal trend tracking).
-- [ ] Step 11: Relational Markdown Wiki Compiler (`GET /v1/wiki/{section}`).
-- [ ] Step 12: Identity Layer & Category-Specific Belief Decay ($\lambda$).
-- [ ] Step 13: Human Supremacy Semantic Diff Engine & OCC Version Checking (`PATCH /v1/wiki`).
+## 🟡 Phase 1: Foundation & Local Self-Hosted Infrastructure (CURRENT FOCUS)
+
+### Step 1: Monorepo & Environment Setup
+- [ ] Initialize workspace with Bun & TypeScript (`package.json`, `tsconfig.json`).
+- [ ] Scaffold monorepo structure (`apps/api` for Hono, `apps/worker` for BullMQ consumer, `apps/web` for Next.js dashboard, `packages/db` for shared models).
+- [ ] Create `docker-compose.yml` for self-hosted local infrastructure (`postgres` preloaded with `pgvector`, `redis`, `minio`).
+- [ ] Verify local containers launch cleanly and Bun execution environment is ready.
+
+### Step 2: Database Schema & Migrations (Postgres + pgvector)
+- [ ] Configure PostgreSQL database connection pool and migration setup.
+- [ ] Create DDL migrations for Scoping & Access Control tables (`orgs`, `org_memberships`, `namespaces`, `namespace_permissions`).
+- [ ] Create DDL migrations for Memory & Attribution tables (`episodes`, `memory_claims`, `memory_relationships`, `entities`, `entity_relationships`, `evidence`, `vectors`).
+- [ ] Add compound B-tree indexes (`tenant_id`, `namespace`, `status`) and `pgvector` HNSW index for vector cosine similarity search.
 
 ---
 
-## ⚪ Phase 3: Ecosystem Scale & Add-Ons (UPCOMING)
-- [ ] Step 14: Cloudflare Durable Objects edge deployment abstraction.
-- [ ] Step 15: Evaluation Benchmark Suite (LOCOMO / LongMemEval recall accuracy).
-- [ ] Step 16: Model Context Protocol (MCP) Server integration.
-- [ ] Step 17: Slack, Notion, and GitHub Data Connectors.
+## ⚪ Phase 2: Authentication & Synchronous API (`apps/api`)
+
+### Step 3: Google Sign-In & Account Auto-Provisioning
+- [ ] Configure Google OAuth 2.0 / OIDC identity verification in Hono.
+- [ ] Implement auto-provisioning logic: on first sign-in, create a personal `org` (`tenant_id`), assign `role: owner` membership, and provision `"default"` namespace.
+- [ ] Issue stateless signed JWT / secure session cookies carrying verified `user_id` and `tenant_id`.
+
+### Step 4: Fast Ingestion Endpoint (`POST /v1/memories`)
+- [ ] Validate incoming request body against schema (`tenant_id`, `namespace`, text).
+- [ ] Persist immutable `episode` row in Postgres.
+- [ ] Enqueue asynchronous extraction job to BullMQ via Redis.
+- [ ] Return immediate non-blocking response (`202 Accepted`).
+
+### Step 5: Hybrid Retrieval & Projections (`POST /v1/memories/search`, `GET /v1/wiki`)
+- [ ] Enforce namespace access permissions (`can_read`).
+- [ ] Implement hybrid search combining `pgvector` vector similarity, full-text keyword search, and recency/confidence scoring.
+- [ ] Implement inspectable context projection endpoints (`GET /v1/wiki`, `GET /v1/profile`).
+
+---
+
+## ⚪ Phase 3: Asynchronous Extraction & Mutation Worker (`apps/worker`)
+
+### Step 6: BullMQ Consumer Setup
+- [ ] Initialize standalone Bun worker process consuming jobs from Redis queue.
+- [ ] Build error handling, retries, and job status observability.
+
+### Step 7: Single-Call LLM Extraction Engine
+- [ ] Fetch candidate prior claims from Postgres for the incoming episode.
+- [ ] Execute single structured LLM call proposing new claims (`status = pending_review`), relationship edges (`memory_relationships`), entity quintuplets (`entity_relationships`), and mutations against candidate prior claims.
+- [ ] Generate vector embeddings for newly extracted claims.
+
+### Step 8: Mutation Evaluation & Atomic Status Transition
+- [ ] Execute single atomic database transaction applying proposed mutations.
+- [ ] Flip new claims from `pending_review` to `active` and superseded claims to `superseded`.
+- [ ] Link authoritative character offset ranges in `evidence`.
+
+### Step 9: Cold Storage Archiving Sweeps
+- [ ] Implement background sweep exporting superseded/deleted historical claims out of Postgres into cold S3-compatible storage (MinIO / R2).
+- [ ] Build on-demand rehydration utility for deep historical audit queries.
+
+---
+
+## ⚪ Phase 4: Frontend Dashboard & Cloud Scaling (`apps/web`)
+
+### Step 10: Next.js Dashboard & Memory Explorer
+- [ ] Build Google Sign-In authentication and onboarding UI.
+- [ ] Build Org/Tenant & Namespace management interface (invites, roles, permissions).
+- [ ] Build inspectable Memory Explorer and Wiki viewer.
+
+### Step 11: Production & Cloud Deployment Configurations
+- [ ] Prepare production Docker build scripts for self-hosted container deployment.
+- [ ] Configure Phase 1 cloud infrastructure deployment manifests (AWS ECS Express Mode + Neon DB + Amazon SQS).
