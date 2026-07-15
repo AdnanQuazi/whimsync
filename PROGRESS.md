@@ -6,17 +6,17 @@
 
 ## 🟡 Phase 1: Foundation & Local Self-Hosted Infrastructure (CURRENT FOCUS)
 
-### Step 1: Monorepo & Environment Setup (IN PROGRESS)
+### Step 1: Monorepo & Environment Setup (COMPLETED)
 - [x] Create `docker-compose.yml` for self-hosted local infrastructure (`postgres` preloaded with `pgvector`, `redis`, `minio`).
 - [x] Verify local containers launch cleanly and Bun execution environment is ready.
-- [ ] Initialize Bun Workspaces monorepo structure (`apps/api` for Hono, `apps/worker` for BullMQ consumer, `apps/web` for Next.js dashboard, `packages/db` for shared database models).
-- [ ] Configure workspace package names, TypeScript configurations, and root development scripts.
+- [x] Initialize Bun Workspaces monorepo structure (`apps/api` for Hono, `apps/worker` for BullMQ consumer, `apps/web` for Next.js dashboard, `packages/db` for shared database models).
+- [x] Configure workspace package names, TypeScript configurations, and root development scripts.
 
-### Step 2: Database Schema & Migrations (`packages/db`)
-- [ ] Configure PostgreSQL connection pool (`postgres` / Drizzle / Kysely) in `packages/db`.
-- [ ] Create DDL migrations for Scoping & Access Control tables (`orgs`, `org_memberships`, `namespaces`, `namespace_permissions`).
-- [ ] Create DDL migrations for Memory & Attribution tables (`episodes`, `memory_claims`, `memory_relationships`, `entities`, `entity_relationships`, `evidence`, `vectors`).
-- [ ] Add compound B-tree indexes (`tenant_id`, `namespace`, `status`) and `pgvector` HNSW index for vector cosine similarity search.
+### Step 2: Database Schema & Migrations (`packages/db`) (COMPLETED)
+- [x] Configure PostgreSQL connection pool (`postgres` / Drizzle / Kysely) in `packages/db`.
+- [x] Create DDL migrations for Scoping & Access Control tables (`orgs`, `org_memberships`, `namespaces`, `namespace_permissions`).
+- [x] Create DDL migrations for Memory & Attribution tables (`episodes`, `memory_claims`, `memory_relationships`, `entities`, `entity_relationships`, `evidence`, `vectors`).
+- [x] Add compound B-tree indexes (`tenant_id`, `namespace`, `status`) and `pgvector` HNSW index for vector cosine similarity search.
 
 ---
 
