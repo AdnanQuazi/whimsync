@@ -1,0 +1,56 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  test:
+    name: Run Tests (`bun test`)
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgres://whimsync:whimsync_dev_pass@localhost:5432/whimsync
+      CLERK_SECRET_KEY: "" # Empty to enable test header auth bypass in clerkAuth
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: whimsync
+          POSTGRES_PASSWORD: whimsync_dev_pass
+          POSTGRES_DB: whimsync
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U whimsync -d whimsync"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cache Bun Dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install Dependencies
+        run: bun install
+
+      - name: Run Database Migrations
+        run: bun run db:migrate
+
+      - name: Run Integration Tests
+        run: bun run test
