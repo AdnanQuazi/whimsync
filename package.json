@@ -9,6 +9,8 @@
     "dev:api": "bun --filter api dev",
     "dev:worker": "bun --filter worker dev",
     "dev:web": "bun --filter web dev",
+    "test": "bun test",
+    "test:api": "bun --filter api test",
     "db:generate": "bun --cwd packages/db db:generate",
     "db:migrate": "bun packages/db/src/migrate.ts",
     "db:push": "bun --cwd packages/db db:push",
