@@ -27,4 +27,7 @@ app.route("/v1/orgs", orgRoutes);
 // Global Error Handler
 app.onError(errorHandler);
 
-export default app;
+export default {
+  port: Number(process.env.PORT) || 3001,
+  fetch: app.fetch,
+};
