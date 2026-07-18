@@ -3,25 +3,19 @@ import { db, schema } from "@whimsync/db";
 import { eq } from "drizzle-orm";
 import { tenantService } from "../services/tenantService";
 import { userService } from "../services/userService";
+import { cleanupStaleTestRows, cleanupUsersAndOrgs } from "./testUtils";
 
 const testClerkId = `clerk-test-user-${crypto.randomUUID()}`;
 const testMemberClerkId = `clerk-member-user-${crypto.randomUUID()}`;
 
 describe("UserService & TenantService Domain Integration Tests", () => {
   beforeAll(async () => {
-    await db.delete(schema.users).where(eq(schema.users.id, testClerkId));
-    await db.delete(schema.users).where(eq(schema.users.id, testMemberClerkId));
+    await cleanupStaleTestRows();
+    await cleanupUsersAndOrgs([testClerkId, testMemberClerkId]);
   });
 
   afterAll(async () => {
-    await db
-      .delete(schema.orgMemberships)
-      .where(eq(schema.orgMemberships.userId, testClerkId));
-    await db
-      .delete(schema.orgMemberships)
-      .where(eq(schema.orgMemberships.userId, testMemberClerkId));
-    await db.delete(schema.users).where(eq(schema.users.id, testClerkId));
-    await db.delete(schema.users).where(eq(schema.users.id, testMemberClerkId));
+    await cleanupUsersAndOrgs([testClerkId, testMemberClerkId]);
   });
 
   test("findOrProvisionUser should auto-provision brand-new user, personal org, owner membership, and default namespace", async () => {

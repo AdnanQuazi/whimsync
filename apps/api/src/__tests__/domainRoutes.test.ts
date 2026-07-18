@@ -1,20 +1,17 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { db, schema } from "@whimsync/db";
-import { eq } from "drizzle-orm";
 import app from "../index";
+import { cleanupStaleTestRows, cleanupUsersAndOrgs } from "./testUtils";
 
 const testClerkId = `route-test-user-${crypto.randomUUID()}`;
 
 describe("Domain Routes HTTP Integration Tests (`/v1/users` & `/v1/orgs`)", () => {
   beforeAll(async () => {
-    await db.delete(schema.users).where(eq(schema.users.id, testClerkId));
+    await cleanupStaleTestRows();
+    await cleanupUsersAndOrgs([testClerkId]);
   });
 
   afterAll(async () => {
-    await db
-      .delete(schema.orgMemberships)
-      .where(eq(schema.orgMemberships.userId, testClerkId));
-    await db.delete(schema.users).where(eq(schema.users.id, testClerkId));
+    await cleanupUsersAndOrgs([testClerkId]);
   });
 
   test("GET /v1/users/me without auth token/header should return 401 Unauthorized", async () => {
