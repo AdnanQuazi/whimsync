@@ -1,0 +1,28 @@
+name: TypeScript Check
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  typecheck:
+    name: Run Workspace Type Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun & Dependencies
+        uses: ./.github/actions/setup-bun
+
+      - name: Type Check Database Package (`packages/db`)
+        run: bunx tsc --project packages/db/tsconfig.json --noEmit
+
+      - name: Type Check API (`apps/api`)
+        run: bunx tsc --project apps/api/tsconfig.json --noEmit
+
+      - name: Type Check Worker (`apps/worker`)
+        run: bunx tsc --project apps/worker/tsconfig.json --noEmit
+
+      - name: Type Check Web (`apps/web`)
+        run: bunx tsc --project apps/web/tsconfig.json --noEmit

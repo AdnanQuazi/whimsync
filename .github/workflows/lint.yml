@@ -1,0 +1,19 @@
+name: Lint & Format
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: Run Biome Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun & Dependencies
+        uses: ./.github/actions/setup-bun
+
+      - name: Run Biome Linter & Formatter Check
+        run: bun run lint
