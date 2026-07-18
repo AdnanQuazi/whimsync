@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import app from "../index";
+import { app } from "../index";
 import { cleanupStaleTestRows, cleanupUsersAndOrgs } from "./testUtils";
 
 const testClerkId = `route-test-user-${crypto.randomUUID()}`;
