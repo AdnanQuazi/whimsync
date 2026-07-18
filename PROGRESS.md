@@ -4,7 +4,7 @@
 
 ---
 
-## 🟡 Phase 1: Foundation & Local Self-Hosted Infrastructure (CURRENT FOCUS)
+## 🟢 Phase 1: Foundation & Local Self-Hosted Infrastructure (COMPLETED)
 
 ### Step 1: Monorepo & Environment Setup (COMPLETED)
 - [x] Create `docker-compose.yml` for self-hosted local infrastructure (`postgres` preloaded with `pgvector`, `redis`, `minio`).
@@ -20,12 +20,18 @@
 
 ---
 
-## ⚪ Phase 2: Authentication & Synchronous Hono API (`apps/api`)
+## 🟡 Phase 2: Authentication & Synchronous Hono API (`apps/api`) (CURRENT FOCUS)
 
-### Step 3: Google Sign-In & Account Auto-Provisioning
-- [ ] Configure Google OAuth 2.0 / OIDC identity verification middleware in Hono.
-- [ ] Implement auto-provisioning logic: on first sign-in, create a personal `org` (`tenant_id`), assign `role: owner` membership, and provision `"default"` namespace.
-- [ ] Issue stateless signed JWT / secure HTTP-only session cookies carrying verified `user_id` and `tenant_id`.
+### Step 3: Clerk Authentication, Scope Guards & Error Handling Architecture (COMPLETED)
+- [x] Configure `@clerk/hono` (`clerkAuth`) identity verification across Web, Mobile, and Extension clients with local test header bypass (`x-test-clerk-user-id`).
+- [x] Implement atomic auto-provisioning (`findOrProvisionUser`): on first request, provision `users` row, personal `org` (`<Name>'s Org`), `role: owner` membership, and `"default"` namespace.
+- [x] Build layered authorization middleware (`authGuard`, `tenantGuard` resolving `x-tenant-id`, `requireTenantGuard`, `namespaceAuthGuard`).
+- [x] Build centralized type contract system in `apps/api/src/types/` (single source of truth for `AppVariables` and domain DTOs).
+- [x] Implement enterprise error handling & validation architecture:
+  - `lib/errors.ts`: Operational class hierarchy (`NotFoundError`, `UnauthorizedError`, `ForbiddenError`, `ValidationError`, `ConflictError`).
+  - `lib/pgErrorMap.ts`: Automated translation of Postgres constraint errors (e.g. `23505` unique violation) to clean `409 Conflict` responses.
+  - `lib/validate.ts`: Standardized route schema validation wrapper (`validate("json", Schema)`) returning field-level issue details.
+  - `middleware/errorHandler.ts`: Global error middleware (`app.onError(errorHandler)`) with `requestId()` correlation tracking.
 
 ### Step 4: Fast Ingestion Endpoint (`POST /v1/memories`)
 - [ ] Validate incoming request body against schema (`tenant_id`, `namespace`, text).

@@ -34,8 +34,13 @@
 - **Language & Runtime:** **TypeScript on Bun**.
 - **API HTTP Layer:** **Hono**.
 - **Frontend Dashboard:** **Next.js (React)**.
-- **Authentication:** **Google Sign-In (OAuth 2.0 / OIDC)**. First-time authentication auto-provisions an `org` (`tenant_id`), assigns `role: owner`, and creates the `"default"` namespace.
+- **Authentication:** **Clerk (supporting Google, GitHub, Email/Password across Web, Mobile, and Extensions)**. Hono uses `@clerk/hono` (`clerkMiddleware`) and `authGuard` (`findOrProvisionUser`) to auto-provision an `org` (`tenant_id`), assign `role: owner`, and create the `"default"` namespace on first request.
 - **Database Driver:** Async PostgreSQL driver compatible with Bun and `pgvector`.
+- **Centralized Type System (`apps/api/src/types/`)**: Never re-export or define shared Hono context variables (`AppVariables`), session claim interfaces, or domain DTOs inside middleware, controllers, or service files. All internal API type definitions must be placed in `apps/api/src/types/` and imported directly (`import type { AppVariables } from "../types"`).
+- **Standardized Error Handling & Validation (`lib/errors.ts` & `lib/validate.ts`)**: Never return manual ad-hoc `c.json({ error: ... }, status)` responses for operational errors or validation failures.
+  - Route validation must use `validate("json" | "param" | "query", Schema)` from `apps/api/src/lib/validate.ts` instead of raw `@hono/zod-validator`.
+  - Controllers and guards must throw operational subclasses (`throw new UnauthorizedError()`, `throw new ForbiddenError()`, `throw new NotFoundError()`, `throw new ValidationError()`, `throw new ConflictError()`).
+  - The modular global error handler (`errorHandler` mounted via `app.onError(errorHandler)`) automatically formats exceptions into `{ success: false, error: { code, message, details? } }`.
 
 ---
 
@@ -53,11 +58,14 @@
 When generating or refactoring code, always organize modules using clear separation of concerns across our Bun workspaces:
 
 ### `apps/api/src/` Layout (Hono HTTP Server)
-- **`routes/`**: Define HTTP routing paths and attach Zod request validation middleware (`@hono/zod-validator`). Routes should contain minimal logic and delegate execution to controllers/handlers.
-- **`controllers/` (or `handlers/`)**: Request/response adapters. Parse authenticated context (`c.get('user')`), call domain services, and return typed JSON HTTP responses.
-- **`services/`**: Core business and orchestration logic (e.g., `memoryIngestService.ts`, `searchService.ts`, `authService.ts`). Domain services must be pure TypeScript modules independent of Hono HTTP context.
-- **`middleware/`**: Cross-cutting HTTP middleware (authentication, tenant/namespace authorization guards, rate limiting, structured error handling).
-- **`schemas/`**: Zod validation schemas for API inputs and responses.
+- **`routes/`**: Define HTTP routing paths and attach standardized Zod validation (`validate("json", Schema)` from `../lib/validate`). Routes delegate execution to controllers.
+- **`controllers/` (or `handlers/`)**: Request/response adapters. Parse authenticated context (`c.get('user')`), call domain services, and return typed responses or throw operational `AppError` subclasses.
+- **`services/`**: Core business and orchestration logic (`userService.ts`, `tenantService.ts`, `memoryIngestService.ts`). Domain services must be pure TypeScript modules independent of Hono HTTP context.
+- **`middleware/`**: Cross-cutting HTTP middleware (`clerkAuth.ts`, `authMiddleware.ts` (`authGuard`, `tenantGuard`, `requireTenantGuard`, `namespaceAuthGuard`), `errorHandler.ts`).
+- **`lib/`**: Core utilities and infrastructure constants (`apiResponse.ts`, `errors.ts`, `pgErrorMap.ts`, `validate.ts`).
+- **`types/`**: Centralized single source of truth for all Hono context definitions (`AppVariables`), Clerk session claims, and shared contracts (`index.ts`, `auth.ts`).
+- **`config/`**: Environment and runtime configuration (`cors.ts`).
+- **`schemas/`**: Zod validation schemas for API inputs and responses (`org.ts`, `auth.ts`).
 
 ### `apps/worker/src/` Layout (BullMQ Asynchronous Consumer)
 - **`consumers/`**: BullMQ queue worker setup and event listeners (`episodeConsumer.ts`).
@@ -65,5 +73,5 @@ When generating or refactoring code, always organize modules using clear separat
 - **`mutations/`**: Atomic database transaction execution flipping `pending_review` $\rightarrow$ `active` / `superseded` (`mutationEngine.ts`).
 
 ### `packages/db/src/` Layout (Shared Database Layer)
-- **`schema/`**: Definitive PostgreSQL + `pgvector` table definitions (`orgs.ts`, `memories.ts`, `entities.ts`).
+- **`schema/`**: Definitive PostgreSQL + `pgvector` table definitions (`orgs.ts`, `memories.ts`, `entities.ts`, `auth.ts`).
 - **`client.ts`**: Singleton PostgreSQL database connection pool exported across `api` and `worker`.

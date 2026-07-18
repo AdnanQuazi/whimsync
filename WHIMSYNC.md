@@ -277,18 +277,38 @@ Storage relies on a unified Postgres architecture combined with an object store 
 | **Language & Runtime** | **TypeScript on Bun** | High-performance, low-latency execution with built-in TypeScript support. Unified codebase across API handlers, access-control logic, and background extraction workers. |
 | **Backend HTTP Layer** | **Hono** | Ultra-lightweight web framework running natively on Bun. Provides clean API routing, validation hooks, and portable standards-based request/response handling. |
 | **Frontend App / UI** | **Next.js (React)** | Powers the user dashboard, org/tenant management interface, namespace exploration, and developer console. |
-| **Authentication & Identity** | **Google Sign-In (OAuth 2.0 / OIDC)** | Sole authentication provider for v1. On successful Google Sign-In, the backend maps the verified Google identity (`sub` / email) to `user_id`, auto-provisions a default personal `org` if new, and issues stateless signed JWTs or HTTP-only session cookies. |
+| **Authentication & Identity** | **Clerk (Web, Mobile, Extensions)** | Sole authentication provider handling Google, GitHub, and email/password across all clients. Hono (`apps/api`) uses `@clerk/hono` (`clerkMiddleware`) to verify tokens offline and runs opportunistic auto-provisioning (`findOrProvisionUser`). |
 | **Primary Database** | **PostgreSQL + `pgvector`** | Authoritative store for relational facts, evidence citations, full-text search (`FACTS_FTS`), and vector similarity search. |
 | **Queue Engine** | **Redis + BullMQ** | Handles asynchronous job orchestration for background LLM extraction, mutation evaluation, and scheduled sweeps. |
 | **Cold Storage** | **S3-Compatible Object Store** | MinIO (self-hosted) or AWS S3 / Cloudflare R2 (cloud) for cold archive exports. |
 
-### Authentication & Account Auto-Provisioning Flow
-1. **Sign in:** User authenticates via **Sign in with Google** on the Next.js frontend.
-2. **Identity verification:** Google OIDC token is verified by the Hono API service.
-3. **Org resolution:**
-   - **New User:** Automatically provisions an entry in `orgs` (`tenant_id`), assigns the user as `role: owner` in `org_memberships`, and creates the `"default"` namespace with full permissions.
-   - **Existing User:** Retrieves their existing `org_memberships` and default `tenant_id`.
-4. **Session token:** Issues an authenticated JWT/cookie containing verified `user_id` and active `tenant_id` for subsequent API requests.
+### Authentication & Account Auto-Provisioning Flow (`findOrProvisionUser`)
+1. **Authentication:** User authenticates via **Clerk** (supporting Google, GitHub, Email/Password) on any client (Web, Mobile app, or Chrome Extension).
+2. **Token Verification (`@clerk/hono`):** When a request hits `apps/api`, `clerkMiddleware()` extracts the `__session` HTTP-only cookie or `Authorization: Bearer <jwt>` header and verifies the JWKS/token signature without extra network hops.
+3. **Opportunistic Provisioning (`userService.findOrProvisionUser`):**
+   - Inside `authGuard()`, our backend queries `SELECT * FROM users WHERE id = clerkUserId LIMIT 1`.
+   - **Brand-New User:** Automatically opens an atomic transaction to create `users`, their personal `org` (`<Name>'s Org`), `org_memberships` (`role: owner`), and `"default"` namespace (`canRead: true, canWrite: true`).
+   - **Existing User:** Returns the user row immediately (updating profile fields opportunistically if name, email, or avatar changed).
+4. **Layered Authorization & Active Tenant Resolution:**
+   - **`authGuard()`:** Attaches verified `c.set("user", user)`.
+   - **`tenantGuard()`:** Resolves active tenant from `x-tenant-id` header (or defaults to personal `role: owner` org), verifies membership against `org_memberships`, and sets `c.set("tenantId", tenantId)` and `c.set("orgRole", role)`.
+   - **`namespaceGuard()`:** Owners and Admins bypass explicit checks; Members require `namespace_permissions` rows.
+5. **Domain-Oriented API Structure:**
+   - `GET /v1/users/me` -> returns `{ id, name, email, image }`.
+   - `/v1/orgs` -> complete organization and membership management (`GET /`, `POST /`, `GET /:id`, etc.).
+
+### Centralized Type Contracts & Hono Context Variables
+To eliminate module dependency cycles and maintain type safety across routes, controllers, and services, all shared internal contract definitions reside centrally in `apps/api/src/types/`:
+- **`AppVariables`**: Authoritative typing for `c.get()` context variables (`user`, `tenantId`, `orgRole`, `orgMemberships`, `requestId`).
+- **Domain & Auth DTOs**: Exported cleanly (`ClerkUserIdentity`, `ActiveTenantContext`, `OrgWithRole`) and consumed directly across services and middlewares without scattered re-exports.
+
+### Enterprise Error Handling, Request Correlation & Validation Architecture
+All API responses strictly adhere to a consistent contract (`{ success: true, message, data }` or `{ success: false, error: { code, message, details? } }`):
+1. **Request Correlation (`requestId`)**: Attached to every incoming request via `hono/request-id`, exposing `c.get("requestId")` and `X-Request-Id` response headers for log tracing.
+2. **Standardized Route Validation (`lib/validate.ts`)**: Routes wrap Zod schemas using `validate("json" | "param", Schema)`. Invalid inputs immediately return `400 VALIDATION_ERROR` with structured field-level `details`.
+3. **Operational Error Hierarchy (`lib/errors.ts`)**: Business and authorization checks throw typed operational errors (`NotFoundError`, `UnauthorizedError`, `ForbiddenError`, `ValidationError`, `ConflictError`).
+4. **Postgres Driver Error Mapping (`lib/pgErrorMap.ts`)**: Database constraint violations (`23505` unique violation, `23514` check violation, `23503` foreign key violation) are intercepted and mapped directly to meaningful HTTP status codes (`409 Conflict`, `400 Bad Request`) without leaking raw SQL strings.
+5. **Global Error Middleware (`middleware/errorHandler.ts`)**: Mounted via `app.onError(errorHandler)`, providing a single centralized interception layer for Zod, database, and operational exceptions while logging unhandled non-operational failures alongside request IDs.
 
 ---
 
