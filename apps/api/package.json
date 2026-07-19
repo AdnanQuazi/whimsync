@@ -2,7 +2,8 @@
   "name": "api",
   "scripts": {
     "dev": "bun run --hot src/index.ts",
-    "test": "bun test"
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@clerk/backend": "^3.11.7",

@@ -21,9 +21,9 @@ export const authGuard = () =>
     }
 
     const claims = auth.sessionClaims as ClerkSessionClaims | undefined;
-    const email = claims?.email || claims?.email_address;
+    const email = claims?.email;
     const name = claims?.name;
-    const image = claims?.image || claims?.picture || claims?.image_url;
+    const image = claims?.image;
 
     const user = await userService.findOrProvisionUser({
       id: auth.userId,

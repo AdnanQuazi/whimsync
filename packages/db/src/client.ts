@@ -2,9 +2,13 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema/index";
 
-const connectionString =
-  process.env.DATABASE_URL ||
-  "postgres://whimsync:whimsync_dev_pass@localhost:5432/whimsync";
+const connectionString = process.env.DATABASE_URL;
+
+if (!connectionString) {
+  throw new Error(
+    "Missing required environment variable: DATABASE_URL. Please ensure your .env file is loaded.",
+  );
+}
 
 // Singleton connection pool for PostgreSQL
 export const queryClient = postgres(connectionString, {

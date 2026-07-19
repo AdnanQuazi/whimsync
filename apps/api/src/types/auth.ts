@@ -11,11 +11,8 @@ export interface ClerkUserIdentity {
 
 export interface ClerkSessionClaims {
   email?: string;
-  email_address?: string;
   name?: string;
   image?: string;
-  picture?: string;
-  image_url?: string;
   [key: string]: unknown;
 }
 
