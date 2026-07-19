@@ -1,12 +1,10 @@
-import { clerkMiddleware } from "@clerk/hono";
 import { createMiddleware } from "hono/factory";
-
-const clerk = clerkMiddleware();
-
-const isMockAuthEnabled =
-  process.env.NODE_ENV === "test" && !process.env.CLERK_SECRET_KEY;
+import { clerk } from "../config/clerk";
 
 export const clerkAuth = createMiddleware(async (c, next) => {
+  const isMockAuthEnabled =
+    process.env.NODE_ENV === "test" && !process.env.CLERK_SECRET_KEY;
+
   if (isMockAuthEnabled) {
     const testUserId = c.req.header("x-test-clerk-user-id") || null;
 
