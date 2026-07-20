@@ -6,15 +6,15 @@
     "packages/*"
   ],
   "scripts": {
-    "dev:api": "bun --env-file=.env --cwd apps/api dev",
-    "dev:worker": "bun --env-file=.env --cwd apps/worker dev",
+    "dev:api": "bun --cwd apps/api dev",
+    "dev:worker": "bun --cwd apps/worker dev",
     "dev:web": "bun --cwd apps/web dev",
     "test": "bun --env-file=.env test",
-    "test:api": "bun --env-file=.env --cwd apps/api test",
-    "db:generate": "bun --env-file=.env --cwd packages/db db:generate",
+    "test:api": "bun --cwd apps/api test",
+    "db:generate": "bun --cwd packages/db db:generate",
     "db:migrate": "bun --env-file=.env packages/db/src/migrate.ts",
-    "db:push": "bun --env-file=.env --cwd packages/db db:push",
-    "db:studio": "bun --env-file=.env --cwd packages/db db:studio",
+    "db:push": "bun --cwd packages/db db:push",
+    "db:studio": "bun --cwd packages/db db:studio",
     "lint": "biome check .",
     "format": "biome check --write .",
     "typecheck": "bun --workspaces run typecheck"

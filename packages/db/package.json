@@ -8,10 +8,10 @@
     "./schema": "./src/schema/index.ts"
   },
   "scripts": {
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "bun src/migrate.ts",
-    "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio",
+    "db:generate": "bun --env-file=../../.env x drizzle-kit generate",
+    "db:migrate": "bun --env-file=../../.env src/migrate.ts",
+    "db:push": "bun --env-file=../../.env x drizzle-kit push",
+    "db:studio": "bun --env-file=../../.env x drizzle-kit studio",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

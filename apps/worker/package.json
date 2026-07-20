@@ -1,7 +1,7 @@
 {
   "name": "worker",
   "scripts": {
-    "dev": "bun run --hot src/index.ts",
+    "dev": "bun --env-file=../../.env run --hot src/index.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

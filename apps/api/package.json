@@ -1,8 +1,8 @@
 {
   "name": "api",
   "scripts": {
-    "dev": "bun run --hot src/index.ts",
-    "test": "bun test",
+    "dev": "bun --env-file=../../.env run --hot src/index.ts",
+    "test": "bun --env-file=../../.env test",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
