@@ -54,29 +54,29 @@ describe("UserService & TenantService Domain Integration Tests", () => {
     expect(updated.image).toBe("https://avatar.test/new.png");
   });
 
-  test("resolveActiveTenant should verify membership when x-tenant-id requested, or fallback to personal org", async () => {
+  test("verifyTenantMembership should strictly require tenantId and query membership directly at DB level without fallbacks", async () => {
     const orgs = await tenantService.getUserOrgs(testClerkId);
     const personalOrgId = orgs[0].id;
 
-    // Fallback without requestedTenantId
-    const fallbackContext =
-      await tenantService.resolveActiveTenant(testClerkId);
-    expect(fallbackContext?.activeTenantId).toBe(personalOrgId);
-    expect(fallbackContext?.activeRole).toBe("owner");
+    // Without tenantId, must strictly return null
+    const fallbackMembership =
+      await tenantService.verifyTenantMembership(testClerkId);
+    expect(fallbackMembership).toBeNull();
 
-    // Explicit valid requestedTenantId
-    const explicitContext = await tenantService.resolveActiveTenant(
+    // Explicit valid tenantId
+    const explicitMembership = await tenantService.verifyTenantMembership(
       testClerkId,
       personalOrgId,
     );
-    expect(explicitContext?.activeTenantId).toBe(personalOrgId);
+    expect(explicitMembership?.orgId).toBe(personalOrgId);
+    expect(explicitMembership?.role).toBe("owner");
 
-    // Explicit invalid requestedTenantId (not a member)
-    const invalidContext = await tenantService.resolveActiveTenant(
+    // Explicit invalid tenantId (not a member)
+    const invalidMembership = await tenantService.verifyTenantMembership(
       testClerkId,
       crypto.randomUUID(),
     );
-    expect(invalidContext).toBeNull();
+    expect(invalidMembership).toBeNull();
   });
 
   test("hasNamespacePermission should allow owner bypass and enforce explicit grants for members", async () => {
