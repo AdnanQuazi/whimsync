@@ -29,6 +29,9 @@ export async function cleanupUsersAndOrgs(userIds: string[]) {
   }
 
   await db
+    .delete(schema.episodes)
+    .where(inArray(schema.episodes.userId, userIds));
+  await db
     .delete(schema.namespacePermissions)
     .where(inArray(schema.namespacePermissions.userId, userIds));
   await db
@@ -49,6 +52,7 @@ export async function cleanupStaleTestRows() {
         like(schema.users.id, "route-test-user-%"),
         like(schema.users.id, "clerk-test-user-%"),
         like(schema.users.id, "clerk-member-user-%"),
+        like(schema.users.id, "memory-test-user-%"),
       ),
     );
   const staleIds = staleUsers.map((u) => u.id);

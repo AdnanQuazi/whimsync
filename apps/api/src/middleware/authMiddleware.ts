@@ -1,6 +1,10 @@
 import { getAuth } from "@clerk/hono";
 import { createMiddleware } from "hono/factory";
-import { ForbiddenError, UnauthorizedError } from "../lib/errors";
+import {
+  ForbiddenError,
+  UnauthorizedError,
+  ValidationError,
+} from "../lib/errors";
 import { tenantService } from "../services/tenantService";
 import { userService } from "../services/userService";
 
@@ -38,9 +42,9 @@ export const authGuard = () =>
 
 /**
  * Organization Scope Guard (`tenantGuard`):
- * 1. Resolves active tenant from `x-tenant-id` header or fallback personal org.
+ * 1. Strictly requires `x-tenant-id` header on all tenant-scoped endpoints.
  * 2. Verifies the user is actually a member of the requested tenant.
- * 3. Attaches `c.set("tenantId")`, `c.set("orgRole")`, and `c.set("orgMemberships")`.
+ * 3. Attaches `c.set("tenantId")`, `c.set("orgRole")`, and `c.set("orgMembership")`.
  */
 export const tenantGuard = () =>
   createMiddleware<{ Variables: AppVariables }>(async (c, next) => {
@@ -52,35 +56,27 @@ export const tenantGuard = () =>
     }
 
     const requestedTenantId = c.req.header("x-tenant-id");
-    const tenantContext = await tenantService.resolveActiveTenant(
+    if (!requestedTenantId) {
+      throw new ValidationError(
+        "x-tenant-id header is required for tenant-scoped endpoints.",
+      );
+    }
+
+    const membership = await tenantService.verifyTenantMembership(
       user.id,
       requestedTenantId,
     );
 
-    if (!tenantContext) {
+    if (!membership) {
       throw new ForbiddenError(
         "Forbidden: User is not a member of the requested tenant/organization",
       );
     }
 
-    c.set("tenantId", tenantContext.activeTenantId);
-    c.set("orgRole", tenantContext.activeRole);
-    c.set("orgMemberships", tenantContext.memberships);
+    c.set("tenantId", membership.orgId);
+    c.set("orgRole", membership.role);
+    c.set("orgMembership", membership);
 
-    await next();
-  });
-
-/**
- * Ensures that `tenantId` is strictly non-null before proceeding.
- */
-export const requireTenantGuard = () =>
-  createMiddleware<{ Variables: AppVariables }>(async (c, next) => {
-    const tenantId = c.get("tenantId");
-    if (!tenantId) {
-      throw new ForbiddenError(
-        "Forbidden: No active organization / tenant found.",
-      );
-    }
     await next();
   });
 

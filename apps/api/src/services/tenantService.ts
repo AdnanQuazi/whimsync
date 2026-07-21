@@ -1,43 +1,41 @@
 import { db, schema } from "@whimsync/db";
 import { and, eq } from "drizzle-orm";
 
-import type { ActiveTenantContext, OrgWithRole } from "../types";
+import type { OrgMembershipSummary, OrgWithRole } from "../types";
 
 export class TenantService {
   /**
-   * Resolves the active tenant ID and role from `x-tenant-id` header or fallback personal org.
-   * Verifies that the user is actually a member of the requested tenant (`orgId`).
+   * Verifies that the user is a member of the requested organization (`tenantId`),
+   * querying directly at the database level using indexed columns (`userId`, `orgId`).
    */
-  async resolveActiveTenant(
+  async verifyTenantMembership(
     userId: string,
-    requestedTenantId?: string | null,
-  ): Promise<ActiveTenantContext | null> {
-    const memberships = await db
-      .select()
-      .from(schema.orgMemberships)
-      .where(eq(schema.orgMemberships.userId, userId));
-
-    if (requestedTenantId) {
-      const membership = memberships.find((m) => m.orgId === requestedTenantId);
-      if (!membership) {
-        // User requested a tenant they are not a member of
-        return null;
-      }
-      return {
-        activeTenantId: membership.orgId,
-        activeRole: membership.role,
-        memberships,
-      };
+    tenantId?: string | null,
+  ): Promise<OrgMembershipSummary | null> {
+    if (!tenantId) {
+      return null;
     }
 
-    // Default fallback: personal org (role = owner) or first org membership
-    const activeMembership =
-      memberships.find((m) => m.role === "owner") || memberships[0];
+    const [membership] = await db
+      .select()
+      .from(schema.orgMemberships)
+      .where(
+        and(
+          eq(schema.orgMemberships.userId, userId),
+          eq(schema.orgMemberships.orgId, tenantId),
+        ),
+      )
+      .limit(1);
+
+    if (!membership) {
+      return null;
+    }
 
     return {
-      activeTenantId: activeMembership ? activeMembership.orgId : null,
-      activeRole: activeMembership ? activeMembership.role : null,
-      memberships,
+      orgId: membership.orgId,
+      userId: membership.userId,
+      role: membership.role,
+      joinedAt: membership.joinedAt,
     };
   }
 

@@ -9,9 +9,12 @@
     "@clerk/backend": "^3.11.7",
     "@clerk/hono": "^0.1.53",
     "@hono/zod-validator": "^0.9.0",
+    "@whimsync/core": "workspace:*",
     "@whimsync/db": "workspace:*",
+    "bullmq": "^5.41.0",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.12.30",
+    "ioredis": "^5.5.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {

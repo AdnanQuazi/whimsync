@@ -4,8 +4,9 @@ import {
   UnauthorizedError,
   ValidationError,
 } from "../lib/errors";
+import type { CreateOrgSchema } from "../schemas/org";
 import { tenantService } from "../services/tenantService";
-import type { AppVariables } from "../types";
+import type { AppVariables, ValidatedContext } from "../types";
 
 export class OrgController {
   /**
@@ -23,13 +24,13 @@ export class OrgController {
   /**
    * Creates a new team organization and assigns the user as `owner` (`POST /v1/orgs`).
    */
-  async createOrg(c: Context<{ Variables: AppVariables }>) {
+  async createOrg(c: ValidatedContext<"json", typeof CreateOrgSchema>) {
     const user = c.get("user");
     if (!user) {
       throw new UnauthorizedError();
     }
-    const body = await c.req.json().catch(() => ({}));
-    const name = body?.name?.trim();
+    const body = c.req.valid("json");
+    const name = body.name.trim();
     if (!name) {
       throw new ValidationError("Organization name is required");
     }

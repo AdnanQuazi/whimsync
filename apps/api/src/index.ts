@@ -3,6 +3,7 @@ import { cors } from "hono/cors";
 import { requestId } from "hono/request-id";
 import { allowedOrigins } from "./config/cors";
 import { errorHandler } from "./middleware/errorHandler";
+import { memoryRoutes } from "./routes/memoryRoutes";
 import { orgRoutes } from "./routes/orgRoutes";
 import { userRoutes } from "./routes/userRoutes";
 import type { AppVariables } from "./types";
@@ -23,6 +24,7 @@ app.use(
 
 app.route("/v1/users", userRoutes);
 app.route("/v1/orgs", orgRoutes);
+app.route("/v1/memories", memoryRoutes);
 
 // Global Error Handler
 app.onError(errorHandler);

@@ -32,6 +32,7 @@ describe("Domain Routes HTTP Integration Tests (`/v1/users` & `/v1/orgs`)", () =
     });
 
     expect(res.status).toBe(200);
+    // biome-ignore lint/suspicious/noExplicitAny: Test JSON payload inspection
     const json = (await res.json()) as any;
     expect(json.id).toBe(testClerkId);
     expect(json.name).toBe("Route Test User");
@@ -47,6 +48,7 @@ describe("Domain Routes HTTP Integration Tests (`/v1/users` & `/v1/orgs`)", () =
     });
 
     expect(res.status).toBe(200);
+    // biome-ignore lint/suspicious/noExplicitAny: Test JSON payload inspection
     const json = (await res.json()) as any;
     expect(Array.isArray(json)).toBe(true);
     expect(json.length).toBeGreaterThanOrEqual(1);
@@ -65,6 +67,7 @@ describe("Domain Routes HTTP Integration Tests (`/v1/users` & `/v1/orgs`)", () =
     });
 
     expect(res.status).toBe(201);
+    // biome-ignore lint/suspicious/noExplicitAny: Test JSON payload inspection
     const json = (await res.json()) as any;
     expect(json.name).toBe("New Team Org");
     expect(json.role).toBe("owner");
@@ -77,6 +80,7 @@ describe("Domain Routes HTTP Integration Tests (`/v1/users` & `/v1/orgs`)", () =
       },
     });
     expect(getRes.status).toBe(200);
+    // biome-ignore lint/suspicious/noExplicitAny: Test JSON payload inspection
     const getJson = (await getRes.json()) as any;
     expect(getJson.id).toBe(json.id);
   });

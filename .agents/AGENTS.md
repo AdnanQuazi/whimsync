@@ -36,9 +36,9 @@
 - **Frontend Dashboard:** **Next.js (React)**.
 - **Authentication:** **Clerk (supporting Google, GitHub, Email/Password across Web, Mobile, and Extensions)**. Hono uses `@clerk/hono` (`clerkMiddleware`) and `authGuard` (`findOrProvisionUser`) to auto-provision an `org` (`tenant_id`), assign `role: owner`, and create the `"default"` namespace on first request.
 - **Database Driver:** Async PostgreSQL driver compatible with Bun and `pgvector`.
-- **Centralized Type System (`apps/api/src/types/`)**: Never re-export or define shared Hono context variables (`AppVariables`), session claim interfaces, or domain DTOs inside middleware, controllers, or service files. All internal API type definitions must be placed in `apps/api/src/types/` and imported directly (`import type { AppVariables } from "../types"`).
+- **Centralized Type System (`apps/api/src/types/`)**: Never re-export or define shared Hono context variables (`AppVariables`), session claim interfaces, or domain DTOs inside middleware, controllers, or service files. All internal API type definitions (`AppVariables`, `ValidatedContext`, etc.) must be placed in `apps/api/src/types/` and imported directly (`import type { AppVariables, ValidatedContext } from "../types"`).
 - **Standardized Error Handling & Validation (`lib/errors.ts` & `lib/validate.ts`)**: Never return manual ad-hoc `c.json({ error: ... }, status)` responses for operational errors or validation failures.
-  - Route validation must use `validate("json" | "param" | "query", Schema)` from `apps/api/src/lib/validate.ts` instead of raw `@hono/zod-validator`.
+  - Route validation must use `validate("json" | "param" | "query", Schema)` from `apps/api/src/lib/validate.ts` instead of raw `@hono/zod-validator`. Controllers consuming validated input must use `ValidatedContext<Target, typeof Schema>` (`c.req.valid(target)`).
   - Controllers and guards must throw operational subclasses (`throw new UnauthorizedError()`, `throw new ForbiddenError()`, `throw new NotFoundError()`, `throw new ValidationError()`, `throw new ConflictError()`).
   - The modular global error handler (`errorHandler` mounted via `app.onError(errorHandler)`) automatically formats exceptions into `{ success: false, error: { code, message, details? } }`.
 
@@ -59,9 +59,9 @@ When generating or refactoring code, always organize modules using clear separat
 
 ### `apps/api/src/` Layout (Hono HTTP Server)
 - **`routes/`**: Define HTTP routing paths and attach standardized Zod validation (`validate("json", Schema)` from `../lib/validate`). Routes delegate execution to controllers.
-- **`controllers/` (or `handlers/`)**: Request/response adapters. Parse authenticated context (`c.get('user')`), call domain services, and return typed responses or throw operational `AppError` subclasses.
+- **`controllers/` (or `handlers/`)**: Request/response adapters. Parse authenticated context (`c.get('user')`) or validated input (`c.req.valid('json')` with `ValidatedContext`), call domain services, and return typed responses or throw operational `AppError` subclasses.
 - **`services/`**: Core business and orchestration logic (`userService.ts`, `tenantService.ts`, `memoryIngestService.ts`). Domain services must be pure TypeScript modules independent of Hono HTTP context.
-- **`middleware/`**: Cross-cutting HTTP middleware (`clerkAuth.ts`, `authMiddleware.ts` (`authGuard`, `tenantGuard`, `requireTenantGuard`, `namespaceAuthGuard`), `errorHandler.ts`).
+- **`middleware/`**: Cross-cutting HTTP middleware (`clerkAuth.ts`, `authMiddleware.ts` (`authGuard`, `tenantGuard` strictly requiring `x-tenant-id`, `namespaceAuthGuard`), `errorHandler.ts`).
 - **`lib/`**: Core utilities and infrastructure constants (`apiResponse.ts`, `errors.ts`, `pgErrorMap.ts`, `validate.ts`).
 - **`types/`**: Centralized single source of truth for all Hono context definitions (`AppVariables`), Clerk session claims, and shared contracts (`index.ts`, `auth.ts`).
 - **`config/`**: Environment and runtime configuration (`cors.ts`).

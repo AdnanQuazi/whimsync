@@ -41,6 +41,6 @@ export interface AppVariables {
   user: User;
   tenantId: string | null;
   orgRole: string | null;
-  orgMemberships: OrgMembershipSummary[];
+  orgMembership: OrgMembershipSummary | null;
   requestId?: string;
 }

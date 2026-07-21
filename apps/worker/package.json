@@ -5,6 +5,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@whimsync/core": "workspace:*",
     "@whimsync/db": "workspace:*",
     "bullmq": "^5.41.0",
     "ioredis": "^5.5.0"

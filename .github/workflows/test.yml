@@ -9,7 +9,9 @@ jobs:
     name: Run Tests (`bun test`)
     runs-on: ubuntu-latest
     env:
+      NODE_ENV: test
       DATABASE_URL: postgres://whimsync:whimsync_dev_pass@localhost:5432/whimsync
+      REDIS_URL: redis://localhost:6379
       CLERK_SECRET_KEY: "" # Empty to enable test header auth bypass in clerkAuth
 
     services:
@@ -27,6 +29,16 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -38,4 +50,4 @@ jobs:
         run: bun run db:migrate
 
       - name: Run Integration Tests
-        run: bun run test
+        run: bun test

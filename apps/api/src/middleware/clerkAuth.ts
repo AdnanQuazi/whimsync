@@ -17,6 +17,7 @@ export const clerkAuth = createMiddleware(async (c, next) => {
             name: c.req.header("x-test-clerk-name") || "Route Test User",
           }
         : undefined,
+      // biome-ignore lint/suspicious/noExplicitAny: Hono Context typing bypass for test headers
     })) as any);
 
     return next();
