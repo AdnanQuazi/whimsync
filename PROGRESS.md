@@ -25,16 +25,16 @@
 ### Step 3: Clerk Authentication, Scope Guards & Error Handling Architecture (COMPLETED)
 - [x] Configure `@clerk/hono` (`clerkAuth`) identity verification across Web, Mobile, and Extension clients with local test header bypass (`x-test-clerk-user-id`).
 - [x] Implement atomic auto-provisioning (`findOrProvisionUser`): on first request, provision `users` row, personal `org` (`<Name>'s Org`), `role: owner` membership, and `"default"` namespace.
-- [x] Build layered authorization middleware (`authGuard`, `tenantGuard` resolving `x-tenant-id`, `requireTenantGuard`, `namespaceAuthGuard`).
-- [x] Build centralized type contract system in `apps/api/src/types/` (single source of truth for `AppVariables` and domain DTOs).
+- [x] Build layered authorization middleware (`authGuard`, `tenantGuard` strictly requiring and resolving `x-tenant-id`, `namespaceAuthGuard`).
+- [x] Build centralized type contract system in `apps/api/src/types/` (single source of truth for `AppVariables`, `ValidatedContext`, and domain DTOs).
 - [x] Implement enterprise error handling & validation architecture:
   - `lib/errors.ts`: Operational class hierarchy (`NotFoundError`, `UnauthorizedError`, `ForbiddenError`, `ValidationError`, `ConflictError`).
   - `lib/pgErrorMap.ts`: Automated translation of Postgres constraint errors (e.g. `23505` unique violation) to clean `409 Conflict` responses.
-  - `lib/validate.ts`: Standardized route schema validation wrapper (`validate("json", Schema)`) returning field-level issue details.
+  - `lib/validate.ts`: Standardized route schema validation wrapper (`validate("json", Schema)`) returning field-level issue details and integrating with `ValidatedContext`.
   - `middleware/errorHandler.ts`: Global error middleware (`app.onError(errorHandler)`) with `requestId()` correlation tracking.
 
-### Step 4: Fast Ingestion Endpoint (`POST /v1/memories`)
-- [x] Validate incoming request body against schema (`tenantId`, `namespace`, text).
+### Step 4: Fast Ingestion Endpoint (`POST /v1/memories`) (COMPLETED)
+- [x] Validate incoming request body against schema (`text`, `namespace`, `entityKey`, `sessionId`) via strongly typed `ValidatedContext`.
 - [x] Persist immutable `episode` row in Postgres (`packages/db`).
 - [x] Enqueue asynchronous extraction job to BullMQ via Redis (`packages/core`).
 - [x] Return immediate non-blocking response (`202 Accepted`).

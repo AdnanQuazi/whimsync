@@ -22,9 +22,8 @@ type AppContext = Context<{ Variables: AppVariables }>;
 ## 2. Layered Authentication & Scope Guards (`middleware/`)
 Every authenticated route mounts `clerkAuth` (identity extraction) followed by our domain guards:
 1. `authGuard()`: Auto-provisions `users`, personal `org`, and `"default"` namespace on first login (`findOrProvisionUser`), attaching `c.set("user", user)`.
-2. `tenantGuard()`: Resolves active tenant from `x-tenant-id` request header (or fallback personal org), verifying membership in Postgres and setting `c.set("tenantId")`, `c.set("orgRole")`, and `c.set("orgMemberships")`.
-3. `requireTenantGuard()`: Rejects requests if `tenantId` is null.
-4. `namespaceAuthGuard("read" | "write")`: Checks access permissions for non-owners/admins (`namespace_permissions`).
+2. `tenantGuard()`: Resolves active tenant strictly from `x-tenant-id` request header (no fallbacks), verifying membership in Postgres and setting `c.set("tenantId")`, `c.set("orgRole")`, and `c.set("orgMembership")`.
+3. `namespaceAuthGuard("read" | "write")`: Checks access permissions for non-owners/admins (`namespace_permissions`).
 
 ### Route Setup Example:
 ```typescript
@@ -52,13 +51,25 @@ Never return manual `c.json({ error: ... }, status)` responses. Our global error
 }
 ```
 
-### Route Request Validation (`lib/validate.ts`)
-Instead of raw `@hono/zod-validator` (`zValidator`), use `validate(target, schema)` from `../lib/validate`. It intercepts Zod errors and outputs the exact `VALIDATION_ERROR` envelope automatically.
+### Route Request Validation (`lib/validate.ts` & `ValidatedContext`)
+Instead of raw `@hono/zod-validator` (`zValidator`), use `validate(target, schema)` from `../lib/validate`. It intercepts Zod errors and outputs the exact `VALIDATION_ERROR` envelope automatically. Inside controllers, use `ValidatedContext<Target, typeof Schema>` and `c.req.valid(target)` to retrieve fully typed, cleaned data with zero type casts:
 ```typescript
+// Route:
 import { validate } from "../lib/validate";
 import { CreateOrgSchema } from "../schemas/org";
 
 router.post("/", validate("json", CreateOrgSchema), (c) => controller.createOrg(c));
+
+// Controller:
+import type { ValidatedContext } from "../types";
+import type { CreateOrgSchema } from "../schemas/org";
+
+export class OrgController {
+  async createOrg(c: ValidatedContext<"json", typeof CreateOrgSchema>) {
+    const body = c.req.valid("json"); // Strongly typed!
+    // ...
+  }
+}
 ```
 
 ### Operational Errors inside Controllers & Services (`lib/errors.ts`)
