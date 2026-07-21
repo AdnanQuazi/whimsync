@@ -1,8 +1,9 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { db, schema } from "@whimsync/db";
 import { eq } from "drizzle-orm";
+import { redisConnection } from "../config/redis";
 import { app } from "../index";
-import { episodeQueue, redisConnection } from "../lib/queue";
+import { episodeQueue } from "../lib/queue";
 import { tenantService } from "../services/tenantService";
 import { userService } from "../services/userService";
 import { cleanupStaleTestRows, cleanupUsersAndOrgs } from "./testUtils";

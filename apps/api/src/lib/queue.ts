@@ -3,14 +3,7 @@ import {
   type EpisodeExtractionJobData,
 } from "@whimsync/core";
 import { Queue } from "bullmq";
-import Redis from "ioredis";
-
-const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
-
-export const redisConnection = new Redis(redisUrl, {
-  maxRetriesPerRequest: null, // Required by BullMQ
-  lazyConnect: true, // Connect only when commands are issued to avoid eager connection errors during boot/tests
-});
+import { redisConnection } from "../config/redis";
 
 export const episodeQueue = new Queue<EpisodeExtractionJobData, void, string>(
   EPISODE_EXTRACTION_QUEUE,
