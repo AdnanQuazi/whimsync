@@ -34,10 +34,10 @@
   - `middleware/errorHandler.ts`: Global error middleware (`app.onError(errorHandler)`) with `requestId()` correlation tracking.
 
 ### Step 4: Fast Ingestion Endpoint (`POST /v1/memories`)
-- [ ] Validate incoming request body against schema (`tenant_id`, `namespace`, text).
-- [ ] Persist immutable `episode` row in Postgres (`packages/db`).
-- [ ] Enqueue asynchronous extraction job to BullMQ via Redis.
-- [ ] Return immediate non-blocking response (`202 Accepted`).
+- [x] Validate incoming request body against schema (`tenantId`, `namespace`, text).
+- [x] Persist immutable `episode` row in Postgres (`packages/db`).
+- [x] Enqueue asynchronous extraction job to BullMQ via Redis (`packages/core`).
+- [x] Return immediate non-blocking response (`202 Accepted`).
 
 ### Step 5: Hybrid Retrieval & Projections (`POST /v1/memories/search`, `GET /v1/wiki`)
 - [ ] Enforce namespace access permissions (`can_read`).
