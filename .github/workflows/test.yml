@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: postgres://whimsync:whimsync_dev_pass@localhost:5432/whimsync
+      REDIS_URL: redis://localhost:6379
       CLERK_SECRET_KEY: "" # Empty to enable test header auth bypass in clerkAuth
 
     services:
@@ -23,6 +24,16 @@ jobs:
           - 5432:5432
         options: >-
           --health-cmd "pg_isready -U whimsync -d whimsync"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5

@@ -9,6 +9,7 @@ const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
 
 export const redisConnection = new Redis(redisUrl, {
   maxRetriesPerRequest: null, // Required by BullMQ
+  lazyConnect: true, // Connect only when commands are issued to avoid eager connection errors during boot/tests
 });
 
 export const episodeQueue = new Queue<EpisodeExtractionJobData, void, string>(

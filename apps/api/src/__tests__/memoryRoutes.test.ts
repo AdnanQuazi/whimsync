@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { db, schema } from "@whimsync/db";
 import { eq } from "drizzle-orm";
 import { app } from "../index";
+import { episodeQueue, redisConnection } from "../lib/queue";
 import { tenantService } from "../services/tenantService";
 import { userService } from "../services/userService";
 import { cleanupStaleTestRows, cleanupUsersAndOrgs } from "./testUtils";
@@ -26,6 +27,8 @@ describe("Memory Ingestion Routes (`POST /v1/memories`)", () => {
 
   afterAll(async () => {
     await cleanupUsersAndOrgs([testClerkId]);
+    await episodeQueue.close();
+    await redisConnection.quit();
   });
 
   test("POST /v1/memories without auth token/header should return 401 Unauthorized", async () => {
