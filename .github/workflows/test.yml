@@ -9,6 +9,7 @@ jobs:
     name: Run Tests (`bun test`)
     runs-on: ubuntu-latest
     env:
+      NODE_ENV: test
       DATABASE_URL: postgres://whimsync:whimsync_dev_pass@localhost:5432/whimsync
       REDIS_URL: redis://localhost:6379
       CLERK_SECRET_KEY: "" # Empty to enable test header auth bypass in clerkAuth
