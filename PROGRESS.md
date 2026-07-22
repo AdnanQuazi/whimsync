@@ -43,9 +43,9 @@
 
 ## 🟡 Phase 3: Asynchronous Extraction & Mutation Worker (`apps/worker`) (CURRENT FOCUS)
 
-### Step 5: BullMQ Consumer Setup
-- [ ] Initialize standalone Bun worker process (`apps/worker`) consuming jobs from Redis queue.
-- [ ] Build error handling, retries, and job status observability.
+### Step 5: BullMQ Consumer Setup (COMPLETED)
+- [x] Initialize standalone Bun worker process (`apps/worker`) consuming jobs from Redis queue.
+- [x] Build error handling, retries, and job status observability.
 
 ### Step 6: Single-Call LLM Extraction Engine
 - [ ] Fetch candidate prior claims from Postgres (`episodes` & `memory_claims`) for the incoming episode.
