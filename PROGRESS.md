@@ -20,7 +20,7 @@
 
 ---
 
-## 🟡 Phase 2: Authentication & Synchronous Hono API (`apps/api`) (CURRENT FOCUS)
+## 🟢 Phase 2: Authentication & Synchronous Ingestion API (`apps/api`) (COMPLETED)
 
 ### Step 3: Clerk Authentication, Scope Guards & Error Handling Architecture (COMPLETED)
 - [x] Configure `@clerk/hono` (`clerkAuth`) identity verification across Web, Mobile, and Extension clients with local test header bypass (`x-test-clerk-user-id`).
@@ -39,28 +39,31 @@
 - [x] Enqueue asynchronous extraction job to BullMQ via Redis (`packages/core`).
 - [x] Return immediate non-blocking response (`202 Accepted`).
 
-### Step 5: Hybrid Retrieval & Projections (`POST /v1/memories/search`, `GET /v1/wiki`)
-- [ ] Enforce namespace access permissions (`can_read`).
-- [ ] Implement hybrid search combining `pgvector` vector similarity, full-text keyword search, and recency/confidence scoring.
-- [ ] Implement inspectable context projection endpoints (`GET /v1/wiki`, `GET /v1/profile`).
-
 ---
 
-## ⚪ Phase 3: Asynchronous Extraction & Mutation Worker (`apps/worker`)
+## 🟡 Phase 3: Asynchronous Extraction & Mutation Worker (`apps/worker`) (CURRENT FOCUS)
 
-### Step 6: BullMQ Consumer Setup
-- [ ] Initialize standalone Bun worker process (`apps/worker`) consuming jobs from Redis queue.
-- [ ] Build error handling, retries, and job status observability.
+### Step 5: BullMQ Consumer Setup (COMPLETED)
+- [x] Initialize standalone Bun worker process (`apps/worker`) consuming jobs from Redis queue.
+- [x] Build error handling, retries, and job status observability.
 
-### Step 7: Single-Call LLM Extraction Engine
-- [ ] Fetch candidate prior claims from Postgres for the incoming episode.
+### Step 6: Single-Call LLM Extraction Engine
+- [ ] Fetch candidate prior claims from Postgres (`episodes` & `memory_claims`) for the incoming episode.
 - [ ] Execute single structured LLM call proposing new claims (`status = pending_review`), relationship edges (`memory_relationships`), entity quintuplets (`entity_relationships`), and mutations against candidate prior claims.
-- [ ] Generate vector embeddings for newly extracted claims.
+- [ ] Generate vector embeddings (`pgvector`) for newly extracted claims.
 
-### Step 8: Mutation Evaluation & Atomic Status Transition
+### Step 7: Mutation Evaluation & Atomic Status Transition
 - [ ] Execute single atomic database transaction applying proposed mutations.
 - [ ] Flip new claims from `pending_review` to `active` and superseded claims to `superseded`.
 - [ ] Link authoritative character offset ranges in `evidence`.
+
+---
+
+## ⚪ Phase 4: Hybrid Retrieval API & Storage Sweeps
+
+### Step 8: Hybrid Retrieval API (`POST /v1/memories/search`)
+- [ ] Enforce namespace access permissions (`can_read`).
+- [ ] Implement hybrid search combining `pgvector` vector similarity, full-text keyword search (`FACTS_FTS`), and recency/confidence scoring over active claims.
 
 ### Step 9: Cold Storage Archiving Sweeps
 - [ ] Implement background sweep exporting superseded/deleted historical claims out of Postgres into cold S3-compatible storage (MinIO / R2).
@@ -68,13 +71,23 @@
 
 ---
 
-## ⚪ Phase 4: Frontend Dashboard & Cloud Scaling (`apps/web`)
+## ⚪ Phase 5: Frontend Dashboard & Cloud Scaling (`apps/web`)
 
 ### Step 10: Next.js Dashboard & Memory Explorer
 - [ ] Build Google Sign-In authentication and onboarding UI in `apps/web`.
 - [ ] Build Org/Tenant & Namespace management interface (invites, roles, permissions).
-- [ ] Build inspectable Memory Explorer and Wiki viewer.
+- [ ] Build inspectable Memory Explorer.
 
 ### Step 11: Production & Cloud Deployment Configurations
 - [ ] Build multi-stage production Dockerfile for running Hono API (`apps/api`) and BullMQ worker (`apps/worker`).
 - [ ] Configure Phase 1 cloud infrastructure deployment manifests (AWS ECS Express Mode + Neon DB + Amazon SQS).
+
+---
+
+## ⚪ Phase 6: Deferred Consumer Features & Projections (`WHIMSYNC.md` Section 9)
+
+### Step 12: Context Projection Endpoints & Advanced Consumer Features
+- [ ] Implement inspectable context projection endpoints (`GET /v1/wiki`, `GET /v1/profile`).
+- [ ] Implement reflection generation, profile/agent context summaries, and automated wiki generation.
+- [ ] Implement retrieval traversal strategies (conversational, hierarchical/rollup, graph, tree/lineage).
+- [ ] Implement memory decay and automatic expiration policies.
