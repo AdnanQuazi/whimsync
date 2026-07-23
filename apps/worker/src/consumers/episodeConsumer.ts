@@ -5,6 +5,7 @@ import {
 import { type Job, Worker } from "bullmq";
 import { extractEpisodeClaims } from "../cognitive/extractor";
 import { redisConnection } from "../config/redis";
+import { evaluateAndApplyMutations } from "../mutations/mutationEngine";
 
 /**
  * Process individual episode extraction jobs dequeued from Redis.
@@ -17,7 +18,8 @@ async function processEpisode(
     `[EpisodeConsumer] Processing job ${job.id} | episode: ${episodeId} | tenant: ${tenantId} | namespace: ${namespace} | user: ${userId}`,
   );
 
-  await extractEpisodeClaims(job.data);
+  const extractionPayload = await extractEpisodeClaims(job.data);
+  await evaluateAndApplyMutations(extractionPayload);
 }
 
 /**

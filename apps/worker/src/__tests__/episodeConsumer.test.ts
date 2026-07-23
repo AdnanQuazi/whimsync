@@ -66,7 +66,7 @@ describe("BullMQ Consumer Integration (`episodeConsumer`)", () => {
             `Timeout waiting for BullMQ completed event for ${episodeId}`,
           ),
         );
-      }, 10000);
+      }, 25000);
 
       episodeWorker.on("completed", (job) => {
         if (job.data.episodeId === episodeId) {
@@ -89,5 +89,5 @@ describe("BullMQ Consumer Integration (`episodeConsumer`)", () => {
     // 4. Await worker completion
     const completedJob = await completedPromise;
     expect(completedJob).toBeDefined();
-  });
+  }, 30000);
 });
