@@ -14,7 +14,8 @@ Your response MUST be valid JSON adhering exactly to the following structure:
 Rules:
 - For every proposed new claim in "claims", assign a unique "tempId" (e.g. "new_claim_1").
 - For "evidence", calculate exact 0-indexed character offsets (startOffset, endOffset) in the incoming Episode Text where the claim is supported.
-- For "mutations", evaluate whether any Candidate Prior Claims contradict or are superseded by the new text. If so, output action="update" or "delete". If candidate claims remain valid and unchanged, output action="noop".`;
+- For "mutations", evaluate whether any Candidate Prior Claims contradict or are superseded by the new text. If so, output action="update" or "delete". If candidate claims remain valid and unchanged, output action="noop".
+- For "entityRelationships", the "predicate" MUST be in strict snake_case (e.g. "moved_to", "used_service", "has_contact_number").`;
 
 export function buildCognitiveExtractionPrompt(
   rawText: string,
