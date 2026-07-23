@@ -27,21 +27,9 @@ export async function generateTextEmbeddingsBatch(
 ): Promise<number[][]> {
   if (texts.length === 0) return [];
 
-  const response = await executeEmbedContent(texts);
+  const embeddings = await Promise.all(
+    texts.map((text) => generateTextEmbedding(text)),
+  );
 
-  // @ts-expect-error Compatibility with different versions of @google/genai EmbedContentResponse
-  const embeddings = response.embeddings;
-  if (!embeddings || embeddings.length !== texts.length) {
-    throw new Error(
-      "Failed to generate batch embedding vectors from Gemini API.",
-    );
-  }
-
-  return embeddings.map((emb) => {
-    const values = emb.values;
-    if (!values) {
-      throw new Error("Missing values in embedding vector.");
-    }
-    return values;
-  });
+  return embeddings;
 }
