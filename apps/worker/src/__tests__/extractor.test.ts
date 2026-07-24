@@ -36,6 +36,9 @@ mock.module("../services/llmService", () => {
 
 mock.module("../services/embeddingService", () => {
   return {
+    generateTextEmbedding: async (text: string): Promise<number[]> => {
+      return Array(768).fill(0.5);
+    },
     generateTextEmbeddingsBatch: async (
       texts: string[],
     ): Promise<number[][]> => {
