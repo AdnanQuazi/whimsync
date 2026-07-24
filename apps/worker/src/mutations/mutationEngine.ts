@@ -224,7 +224,13 @@ export async function evaluateAndApplyMutations(
           tenantId: payload.tenantId,
           namespace: payload.namespace,
         })
-        .onConflictDoNothing({ target: [schema.entities.id] })
+        .onConflictDoNothing({
+          target: [
+            schema.entities.tenantId,
+            schema.entities.namespace,
+            schema.entities.canonicalName,
+          ],
+        })
         .returning({ id: schema.entities.id });
 
       let subjectId = subjectRecord?.id;
