@@ -6,6 +6,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@google/genai": "^2.13.0",
     "@whimsync/core": "workspace:*",
     "@whimsync/db": "workspace:*",
     "bullmq": "^5.41.0",

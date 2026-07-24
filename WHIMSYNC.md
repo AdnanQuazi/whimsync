@@ -218,6 +218,7 @@ erDiagram
 
 - **`memory_relationships`** — governs claim-to-claim lifecycle (how understanding evolved). `tenant_id`/`namespace` are denormalized onto the edge for cheap access-filtered traversal (avoids a join back to claims on every graph query). Both endpoints always share the same `namespace` — no cross-namespace edges.
 - **`entity_relationships` (quintuplets)** — subject, predicate, object, scope, rationale. Governs semantic fact structure (what is actually known about how X relates to Y), extracted from claim content, distinct from claim lifecycle. Same no-cross-namespace rule applies.
+- **`entities`** — Deduplication is strictly enforced at the database level via a unique index on `(tenant_id, namespace, canonical_name)`. Concurrent worker extractions use `ON CONFLICT DO NOTHING` to guarantee exactly one global node per semantic entity without race conditions.
 - **Edge lifecycle rule:** on claim supersession, close `SUPPORTS`/`CONTRADICTS` edges (`tx_expired_at = now`) since they describe current truth. Never close `UPDATES`/`DERIVES` edges — they're lineage, not current-truth statements.
 - **Evidence** — many-to-many between claims and episodes. Stores character offsets into the immutable episode text as source of truth (the `excerpt` string is a rendering cache, not authoritative). Written in the same atomic transaction as the claim it supports — never after.
 
@@ -280,6 +281,7 @@ Storage relies on a unified Postgres architecture combined with an object store 
 | **Authentication & Identity** | **Clerk (Web, Mobile, Extensions)** | Sole authentication provider handling Google, GitHub, and email/password across all clients. Hono (`apps/api`) uses `@clerk/hono` (`clerkMiddleware`) to verify tokens offline and runs opportunistic auto-provisioning (`findOrProvisionUser`). |
 | **Primary Database** | **PostgreSQL + `pgvector`** | Authoritative store for relational facts, evidence citations, full-text search (`FACTS_FTS`), and vector similarity search. |
 | **Queue Engine** | **Redis + BullMQ** | Handles asynchronous job orchestration for background LLM extraction, mutation evaluation, and scheduled sweeps. |
+| **Cognitive Engine** | **Google Gemini (Flash & Embeddings)** | Uses `gemini-3.5-flash-lite` for single-call structured extraction and `gemini-embedding-2` for 768-dimensional dense vector embeddings. |
 | **Cold Storage** | **S3-Compatible Object Store** | MinIO (self-hosted) or AWS S3 / Cloudflare R2 (cloud) for cold archive exports. |
 
 ### Authentication & Account Auto-Provisioning Flow (`findOrProvisionUser`)

@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./cognitive": "./src/cognitive/index.ts",
     "./queue": "./src/queue/index.ts"
   },
   "scripts": {
@@ -12,5 +13,8 @@
   },
   "devDependencies": {
     "@types/bun": "latest"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
   }
 }

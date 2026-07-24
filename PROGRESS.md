@@ -41,25 +41,25 @@
 
 ---
 
-## 🟡 Phase 3: Asynchronous Extraction & Mutation Worker (`apps/worker`) (CURRENT FOCUS)
+## 🟢 Phase 3: Asynchronous Extraction & Mutation Worker (`apps/worker`) (COMPLETED)
 
 ### Step 5: BullMQ Consumer Setup (COMPLETED)
 - [x] Initialize standalone Bun worker process (`apps/worker`) consuming jobs from Redis queue.
 - [x] Build error handling, retries, and job status observability.
 
-### Step 6: Single-Call LLM Extraction Engine
-- [ ] Fetch candidate prior claims from Postgres (`episodes` & `memory_claims`) for the incoming episode.
-- [ ] Execute single structured LLM call proposing new claims (`status = pending_review`), relationship edges (`memory_relationships`), entity quintuplets (`entity_relationships`), and mutations against candidate prior claims.
-- [ ] Generate vector embeddings (`pgvector`) for newly extracted claims.
+### Step 6: Single-Call LLM Extraction Engine (COMPLETED)
+- [x] Fetch candidate prior claims from Postgres (`episodes` & `memory_claims`) for the incoming episode.
+- [x] Execute single structured LLM call proposing new claims (`status = pending_review`), relationship edges (`memory_relationships`), entity quintuplets (`entity_relationships`), and mutations against candidate prior claims.
+- [x] Generate vector embeddings (`pgvector`) for newly extracted claims.
 
-### Step 7: Mutation Evaluation & Atomic Status Transition
-- [ ] Execute single atomic database transaction applying proposed mutations.
-- [ ] Flip new claims from `pending_review` to `active` and superseded claims to `superseded`.
-- [ ] Link authoritative character offset ranges in `evidence`.
+### Step 7: Mutation Evaluation & Atomic Status Transition (COMPLETED)
+- [x] Execute single atomic database transaction applying proposed mutations.
+- [x] Flip new claims from `pending_review` to `active` and superseded claims to `superseded`.
+- [x] Link authoritative character offset ranges in `evidence`.
 
 ---
 
-## ⚪ Phase 4: Hybrid Retrieval API & Storage Sweeps
+## 🟡 Phase 4: Hybrid Retrieval API & Storage Sweeps (CURRENT FOCUS)
 
 ### Step 8: Hybrid Retrieval API (`POST /v1/memories/search`)
 - [ ] Enforce namespace access permissions (`can_read`).

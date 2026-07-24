@@ -4,6 +4,7 @@ import {
   real,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import { memoryClaims } from "./memories";
@@ -32,6 +33,11 @@ export const entities = pgTable(
   (table) => [
     index("entities_tenant_ns_idx").on(table.tenantId, table.namespace),
     index("entities_canonical_name_idx").on(table.canonicalName),
+    uniqueIndex("entities_canonical_name_unique_idx").on(
+      table.tenantId,
+      table.namespace,
+      table.canonicalName,
+    ),
     index("entities_type_idx").on(table.type),
     index("entities_user_id_idx").on(table.userId),
   ],

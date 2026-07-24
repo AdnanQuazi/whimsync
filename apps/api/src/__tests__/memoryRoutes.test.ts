@@ -28,6 +28,7 @@ describe("Memory Ingestion Routes (`POST /v1/memories`)", () => {
 
   afterAll(async () => {
     await cleanupUsersAndOrgs([testClerkId]);
+    await episodeQueue.obliterate({ force: true });
     await episodeQueue.close();
     await redisConnection.quit();
   });
