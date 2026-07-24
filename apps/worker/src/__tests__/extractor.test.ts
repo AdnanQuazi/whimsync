@@ -1,5 +1,49 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
 import crypto from "node:crypto";
+import type { CognitiveExtractionResult } from "@whimsync/core";
+
+mock.module("../services/llmService", () => {
+  return {
+    executeStructuredExtraction:
+      async (): Promise<CognitiveExtractionResult> => {
+        return {
+          claims: [
+            {
+              tempId: "claim_test_1",
+              content:
+                "User prefers using Bun and TypeScript for high-performance backend systems.",
+              kind: "preference",
+              confidence: 1.0,
+              categories: ["tech", "backend"],
+            },
+          ],
+          memoryRelationships: [],
+          entityRelationships: [],
+          mutations: [],
+          evidence: [
+            {
+              claimTempId: "claim_test_1",
+              startOffset: 0,
+              endOffset: 75,
+              excerpt:
+                "User prefers using Bun and TypeScript for high-performance backend systems.",
+            },
+          ],
+        };
+      },
+  };
+});
+
+mock.module("../services/embeddingService", () => {
+  return {
+    generateTextEmbeddingsBatch: async (
+      texts: string[],
+    ): Promise<number[][]> => {
+      return texts.map(() => Array(768).fill(0.5));
+    },
+  };
+});
+
 import type { EpisodeExtractionJobData } from "@whimsync/core";
 import { and, db, eq, schema } from "@whimsync/db";
 import { extractEpisodeClaims } from "../cognitive/extractor";

@@ -1,4 +1,48 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
+import type { CognitiveExtractionResult } from "@whimsync/core";
+
+mock.module("../services/llmService", () => {
+  return {
+    executeStructuredExtraction:
+      async (): Promise<CognitiveExtractionResult> => {
+        return {
+          claims: [
+            {
+              tempId: "claim_test_2",
+              content:
+                "Integration test memory episode for BullMQ queue worker.",
+              kind: "fact",
+              confidence: 1.0,
+              categories: ["test"],
+            },
+          ],
+          memoryRelationships: [],
+          entityRelationships: [],
+          mutations: [],
+          evidence: [
+            {
+              claimTempId: "claim_test_2",
+              startOffset: 0,
+              endOffset: 50,
+              excerpt:
+                "Integration test memory episode for BullMQ queue worker.",
+            },
+          ],
+        };
+      },
+  };
+});
+
+mock.module("../services/embeddingService", () => {
+  return {
+    generateTextEmbeddingsBatch: async (
+      texts: string[],
+    ): Promise<number[][]> => {
+      return texts.map(() => Array(768).fill(0.5));
+    },
+  };
+});
+
 import {
   EPISODE_EXTRACTION_QUEUE,
   type EpisodeExtractionJobData,
