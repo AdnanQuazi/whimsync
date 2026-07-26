@@ -23,8 +23,6 @@ mock.module("../services/llmService", () => {
           evidence: [
             {
               claimTempId: "claim_test_1",
-              startOffset: 0,
-              endOffset: 75,
               excerpt:
                 "User prefers using Bun and TypeScript for high-performance backend systems.",
             },

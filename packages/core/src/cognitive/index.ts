@@ -145,25 +145,18 @@ export const ProposedEvidenceSchema = z.object({
     .describe(
       "The tempId of the newly proposed claim that this excerpt supports.",
     ),
-  startOffset: z
-    .number()
-    .int()
-    .min(0)
-    .describe("0-indexed start character offset in the episode rawText."),
-  endOffset: z
-    .number()
-    .int()
-    .min(0)
-    .describe(
-      "0-indexed end character offset (exclusive) in the episode rawText.",
-    ),
   excerpt: z
     .string()
     .describe(
-      "The exact substring verbatim from rawText between startOffset and endOffset.",
+      "The exact substring verbatim from rawText that supports the claim.",
     ),
 });
 export type ProposedEvidence = z.infer<typeof ProposedEvidenceSchema>;
+
+export interface EvidenceWithOffsets extends ProposedEvidence {
+  startOffset: number;
+  endOffset: number;
+}
 
 /**
  * Master Zod schema representing the single structured response from `gemini-2.5-flash`.
@@ -221,5 +214,5 @@ export interface CognitiveExtractionPayload {
   memoryRelationships: ProposedMemoryRelationship[];
   entityRelationships: ProposedEntityRelationship[];
   mutations: ProposedMutation[];
-  evidence: ProposedEvidence[];
+  evidence: EvidenceWithOffsets[];
 }

@@ -70,6 +70,15 @@ export async function extractEpisodeClaims(
     `[Extractor Seam] Extracted ${extractedClaims.length} claims and evaluated ${result.mutations.length} mutations for episode ${episode.id} in ${elapsedMs}ms.`,
   );
 
+  const evidenceWithOffsets = result.evidence.map((ev) => {
+    const startOffset = data.rawText.indexOf(ev.excerpt);
+    return {
+      ...ev,
+      startOffset: startOffset !== -1 ? startOffset : 0,
+      endOffset: startOffset !== -1 ? startOffset + ev.excerpt.length : 0,
+    };
+  });
+
   // 6. Return typed payload for atomic transaction evaluation
   return {
     episodeId: data.episodeId,
@@ -84,6 +93,6 @@ export async function extractEpisodeClaims(
     memoryRelationships: result.memoryRelationships,
     entityRelationships: result.entityRelationships,
     mutations: result.mutations,
-    evidence: result.evidence,
+    evidence: evidenceWithOffsets,
   };
 }
