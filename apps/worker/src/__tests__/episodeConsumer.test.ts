@@ -22,8 +22,6 @@ mock.module("../services/llmService", () => {
           evidence: [
             {
               claimTempId: "claim_test_2",
-              startOffset: 0,
-              endOffset: 50,
               excerpt:
                 "Integration test memory episode for BullMQ queue worker.",
             },

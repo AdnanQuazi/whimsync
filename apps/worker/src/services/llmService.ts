@@ -1,13 +1,19 @@
+import type { Schema } from "@google/genai";
 import {
   type CandidateClaim,
   type CognitiveExtractionResult,
   CognitiveExtractionResultSchema,
 } from "@whimsync/core";
+import { zodToJsonSchema } from "zod-to-json-schema";
 import {
   buildCognitiveExtractionPrompt,
   COGNITIVE_EXTRACTION_SYSTEM_INSTRUCTION,
 } from "../prompts/prompts";
 import { getAiClient } from "./aiClient";
+
+const EXTRACTION_SCHEMA = zodToJsonSchema(
+  CognitiveExtractionResultSchema as any,
+) as Schema;
 
 export async function executeStructuredExtraction(
   episodeText: string,
@@ -25,7 +31,9 @@ export async function executeStructuredExtraction(
     config: {
       systemInstruction: COGNITIVE_EXTRACTION_SYSTEM_INSTRUCTION,
       responseMimeType: "application/json",
-      temperature: 0.1,
+      responseSchema: EXTRACTION_SCHEMA,
+      temperature: 0.0,
+      maxOutputTokens: 2048,
     },
   });
 

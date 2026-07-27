@@ -37,7 +37,6 @@ export async function fetchCandidateClaims(params: {
       and(
         eq(schema.memoryClaims.tenantId, params.tenantId),
         eq(schema.memoryClaims.namespace, params.namespace),
-        eq(schema.memoryClaims.userId, params.userId),
         eq(schema.memoryClaims.status, "active"),
       ),
     )
