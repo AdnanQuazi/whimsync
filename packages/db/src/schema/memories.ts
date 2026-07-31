@@ -2,12 +2,21 @@ import {
   index,
   integer,
   jsonb,
+  pgEnum,
   pgTable,
   real,
   text,
   timestamp,
+  unique,
   uuid,
 } from "drizzle-orm/pg-core";
+import { ingestionRecords } from "./ingestionRecords";
+
+export const episodeStatusEnum = pgEnum("episode_status", [
+  "pending",
+  "completed",
+  "failed",
+]);
 
 // ==========================================
 // 2. Memory & Attribution Models
@@ -20,6 +29,16 @@ export const episodes = pgTable(
     rawText: text("raw_text").notNull(),
     userId: text("user_id").notNull(),
     sessionId: text("session_id"),
+
+    // Chunking and ingestion tracking
+    sourceIngestionId: uuid("source_ingestion_id").references(
+      () => ingestionRecords.id,
+      { onDelete: "cascade" },
+    ),
+    chunkIndex: integer("chunk_index"),
+    status: episodeStatusEnum("status").notNull().default("pending"),
+    headingPath: text("heading_path"),
+
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -27,6 +46,11 @@ export const episodes = pgTable(
   (table) => [
     index("episodes_user_id_idx").on(table.userId),
     index("episodes_session_id_idx").on(table.sessionId),
+    index("episodes_ingestion_id_idx").on(table.sourceIngestionId),
+    unique("episodes_ingestion_chunk_idx").on(
+      table.sourceIngestionId,
+      table.chunkIndex,
+    ),
   ],
 );
 
