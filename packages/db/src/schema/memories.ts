@@ -36,6 +36,8 @@ export const episodes = pgTable(
       { onDelete: "cascade" },
     ),
     chunkIndex: integer("chunk_index"),
+    chunkStartOffset: integer("chunk_start_offset"),
+    chunkEndOffset: integer("chunk_end_offset"),
     status: episodeStatusEnum("status").notNull().default("pending"),
     headingPath: text("heading_path"),
 
