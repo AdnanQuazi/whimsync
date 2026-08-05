@@ -5,6 +5,7 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -38,6 +39,9 @@ export const ingestionRecords = pgTable(
     // null for text_fast
     storageKey: text("storage_key"),
 
+    // SHA-256 hash of raw uploaded file bytes for deduplication
+    fileHash: text("file_hash"),
+
     // populated only for text_fast (avoids MinIO round-trip)
     rawTextInline: text("raw_text_inline"),
 
@@ -66,5 +70,10 @@ export const ingestionRecords = pgTable(
     index("ingestion_records_tenant_id_idx").on(table.tenantId),
     index("ingestion_records_user_id_idx").on(table.userId),
     index("ingestion_records_session_id_idx").on(table.sessionId),
+    unique("ingestion_records_tenant_ns_hash_idx").on(
+      table.tenantId,
+      table.namespace,
+      table.fileHash,
+    ),
   ],
 );
