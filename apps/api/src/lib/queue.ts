@@ -1,4 +1,6 @@
 import {
+  DOCUMENT_PREPROCESS_QUEUE,
+  type DocumentPreprocessJobData,
   EPISODE_EXTRACTION_QUEUE,
   type EpisodeExtractionJobData,
 } from "@whimsync/core";
@@ -26,3 +28,21 @@ export const episodeQueue = new Queue<EpisodeExtractionJobData, void, string>(
     },
   },
 );
+
+export const documentPreprocessQueue = new Queue<
+  DocumentPreprocessJobData,
+  void,
+  string
+>(DOCUMENT_PREPROCESS_QUEUE, {
+  // biome-ignore lint/suspicious/noExplicitAny: Required for BullMQ connection options compatibility
+  connection: redisConnection as any,
+  defaultJobOptions: {
+    attempts: 3,
+    backoff: {
+      type: "exponential",
+      delay: 2000,
+    },
+    removeOnComplete: { age: 86400, count: 1000 },
+    removeOnFail: { age: 604800 },
+  },
+});
