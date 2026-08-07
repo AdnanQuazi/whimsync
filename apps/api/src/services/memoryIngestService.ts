@@ -93,9 +93,8 @@ export class MemoryIngestService {
       // ----------------------------------------
       // FULL PATH: Long text. Send to Python.
       // ----------------------------------------
-      const buffer = Buffer.from(input.text, "utf-8");
-      const storageKey = await storageService.uploadFile(buffer, "text.txt");
 
+      // Store in DB directly (No MinIO roundtrip for text)
       await db.insert(schema.ingestionRecords).values({
         id: ingestionId,
         tenantId: input.tenantId,
@@ -104,13 +103,13 @@ export class MemoryIngestService {
         entityKey: input.entityKey ?? null,
         sessionId: input.sessionId ?? null,
         sourceType: "text_full",
-        storageKey,
+        rawTextInline: input.text,
+        totalChunks: 0, // Placeholder, updated by TS worker after Python finishes
         status: "pending",
       });
 
       const jobPayload: DocumentPreprocessJobData = {
         ingestionId,
-        storageKey,
         sourceType: "text_full",
         tenantId: input.tenantId,
         namespace: input.namespace,

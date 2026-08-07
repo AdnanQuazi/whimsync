@@ -13,7 +13,13 @@ import {
 } from "../lib/fileValidation";
 
 export const CreateMemorySchema = z.object({
-  text: z.string().min(1, "Memory text cannot be empty"),
+  text: z
+    .string()
+    .min(1, "Memory text cannot be empty")
+    .max(
+      50000,
+      "Text is too long (max 50,000 chars). Please use the /upload endpoint for large documents.",
+    ),
   namespace: z.string().default("default"),
   entityKey: z.string().nullable().optional(),
   sessionId: z.string().nullable().optional(),
