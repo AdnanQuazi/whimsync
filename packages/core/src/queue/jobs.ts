@@ -1,34 +1,40 @@
-export interface DocumentPreprocessJobData {
+export interface DocumentParsingJobData {
   ingestionId: string;
-  storageKey?: string;
-  sourceType: "text_full" | "file";
+  storageKey: string;
+  fileName: string;
+  fileExtension: string;
   tenantId: string;
   namespace: string;
   userId: string;
+  entityKey?: string | null;
+  sessionId?: string | null;
 }
 
-export interface ChunkPayload {
-  text: string;
-  type: "binary_chunk" | "text_chunk";
-  selfRef: string;
-  startOffset: number;
-  endOffset: number;
-  chunkIndex: number;
-  contextPrefix: string | null;
-  headingPath?: string;
-  page?: number;
-  bboxes?: { l: number; t: number; r: number; b: number; page: number }[];
-}
-
-export interface PreprocessResultJobData {
+export interface ChunkingJobData {
   ingestionId: string;
-  chunksStorageKey: string;
-  documentSummary: string;
-  totalChunks: number;
+  sourceType: "text_file" | "inline_text";
+  storageKey?: string;
+  pdfStorageKey?: string;
+  rawTextInline?: string;
+  fileName?: string;
+  fileExtension?: string;
+  tenantId: string;
+  namespace: string;
+  userId: string;
+  entityKey?: string | null;
+  sessionId?: string | null;
+}
+
+export interface CitationBBoxJobData {
+  ingestionId: string;
+  pdfStorageKey: string;
+  tenantId: string;
+  namespace: string;
 }
 
 export interface EpisodeExtractionJobData {
   episodeId: string;
+  ingestionId?: string | null;
   tenantId: string;
   namespace: string;
   userId: string;
@@ -37,9 +43,10 @@ export interface EpisodeExtractionJobData {
   rawText: string;
 
   // Chunking fields
-  documentSummary?: string | null;
-  contextPrefix?: string | null;
-  headingPath?: string | null;
+  chunkIndex: number;
   chunkStartOffset: number;
   chunkEndOffset: number;
+  headingPath?: string | null;
+  documentSummary?: string | null;
+  contextPrefix?: string | null;
 }

@@ -10,14 +10,18 @@ import {
 } from "drizzle-orm/pg-core";
 
 export const sourceTypeEnum = pgEnum("source_type", [
-  "text_fast",
-  "text_full",
-  "file",
+  "binary_document",
+  "text_file",
+  "inline_text",
 ]);
 export const ingestionStatusEnum = pgEnum("ingestion_status", [
   "pending",
-  "preprocessing",
+  "parsing",
+  "chunking",
   "extracting",
+  "embedding",
+  "indexing",
+  "generating_citations",
   "completed",
   "failed",
 ]);
@@ -36,18 +40,24 @@ export const ingestionRecords = pgTable(
 
     sourceType: sourceTypeEnum("source_type").notNull(),
 
-    // null for text_fast
+    // null for inline_text; stores original uploaded file key in MinIO
     storageKey: text("storage_key"),
+
+    // Stores normalized PDF key if converted from DOCX/PPTX
+    convertedPdfStorageKey: text("converted_pdf_storage_key"),
+
+    // Stores parsed Markdown key from PyMuPDF4LLM
+    markdownStorageKey: text("markdown_storage_key"),
 
     // SHA-256 hash of raw uploaded file bytes for deduplication
     fileHash: text("file_hash"),
 
-    // populated only for text_fast (avoids MinIO round-trip)
+    // populated only for inline_text (avoids MinIO round-trip for direct text)
     rawTextInline: text("raw_text_inline"),
 
     status: ingestionStatusEnum("status").notNull().default("pending"),
 
-    // null for text_fast; populated after Python summarization
+    // populated after summarization (if generated)
     documentSummary: text("document_summary"),
 
     totalChunks: integer("total_chunks").notNull().default(0),

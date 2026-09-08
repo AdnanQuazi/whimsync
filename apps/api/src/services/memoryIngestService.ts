@@ -1,13 +1,21 @@
 import {
-  DOCUMENT_PREPROCESS_QUEUE,
-  type DocumentPreprocessJobData,
+  BINARY_EXTENSIONS,
+  CHUNKING_QUEUE,
+  type ChunkingJobData,
+  DOCUMENT_PARSING_QUEUE,
+  type DocumentParsingJobData,
   EPISODE_EXTRACTION_QUEUE,
   type EpisodeExtractionJobData,
 } from "@whimsync/core";
 import { db, schema } from "@whimsync/db";
 import { and, eq } from "drizzle-orm";
 import { FAST_PATH_CHAR_LIMIT } from "../config/constants";
-import { documentPreprocessQueue, episodeQueue } from "../lib/queue";
+import { getExtension } from "../lib/fileValidation";
+import {
+  chunkingQueue,
+  documentParsingQueue,
+  episodeQueue,
+} from "../lib/queue";
 import { storageService } from "./storageService";
 
 export interface IngestTextInput {
@@ -38,7 +46,7 @@ export class MemoryIngestService {
   /**
    * Ingest plain text. Enforces the 1500-character threshold.
    * - <= 1500 chars: fast path (direct to extraction)
-   * - > 1500 chars: full path (upload to MinIO, send to chunker)
+   * - > 1500 chars: full path (send directly to chunker)
    */
   async ingestText(input: IngestTextInput): Promise<string> {
     const ingestionId = crypto.randomUUID();
@@ -54,7 +62,7 @@ export class MemoryIngestService {
         userId: input.userId,
         entityKey: input.entityKey ?? null,
         sessionId: input.sessionId ?? null,
-        sourceType: "text_fast",
+        sourceType: "inline_text",
         rawTextInline: input.text,
         totalChunks: 1,
         status: "extracting",
@@ -75,12 +83,14 @@ export class MemoryIngestService {
 
       const jobPayload: EpisodeExtractionJobData = {
         episodeId,
+        ingestionId,
         tenantId: input.tenantId,
         namespace: input.namespace,
         userId: input.userId,
         entityKey: input.entityKey ?? null,
         sessionId: input.sessionId ?? null,
         rawText: input.text,
+        chunkIndex: 0,
         chunkStartOffset: 0,
         chunkEndOffset: input.text.length,
         documentSummary: null,
@@ -91,7 +101,7 @@ export class MemoryIngestService {
       await episodeQueue.add(EPISODE_EXTRACTION_QUEUE, jobPayload);
     } else {
       // ----------------------------------------
-      // FULL PATH: Long text. Send to Python.
+      // FULL PATH: Long text. Send to Chunker directly.
       // ----------------------------------------
 
       // Store in DB directly (No MinIO roundtrip for text)
@@ -102,21 +112,25 @@ export class MemoryIngestService {
         userId: input.userId,
         entityKey: input.entityKey ?? null,
         sessionId: input.sessionId ?? null,
-        sourceType: "text_full",
+        sourceType: "inline_text",
         rawTextInline: input.text,
-        totalChunks: 0, // Placeholder, updated by TS worker after Python finishes
+        totalChunks: 0, // Placeholder, updated by TS worker after chunking finishes
         status: "pending",
       });
 
-      const jobPayload: DocumentPreprocessJobData = {
+      const jobPayload: ChunkingJobData = {
         ingestionId,
-        sourceType: "text_full",
+        sourceType: "inline_text",
+        rawTextInline: input.text,
+        fileExtension: ".txt",
         tenantId: input.tenantId,
         namespace: input.namespace,
         userId: input.userId,
+        entityKey: input.entityKey ?? null,
+        sessionId: input.sessionId ?? null,
       };
 
-      await documentPreprocessQueue.add(DOCUMENT_PREPROCESS_QUEUE, jobPayload);
+      await chunkingQueue.add(CHUNKING_QUEUE, jobPayload);
     }
 
     return ingestionId;
@@ -125,7 +139,7 @@ export class MemoryIngestService {
   /**
    * Ingest multiple file uploads.
    * Calculates SHA-256 hash for deduplication. Uploads novel files to MinIO
-   * and enqueues to Python document-preprocess queue.
+   * and enqueues binary files to parsing queue and text/code files directly to chunking queue.
    */
   async ingestFiles(input: IngestFilesInput): Promise<FileIngestResult[]> {
     const results: FileIngestResult[] = [];
@@ -165,6 +179,10 @@ export class MemoryIngestService {
         file.name,
       );
 
+      const ext = getExtension(file.name);
+      const isBinary = ext in BINARY_EXTENSIONS;
+      const sourceType = isBinary ? "binary_document" : "text_file";
+
       await db.insert(schema.ingestionRecords).values({
         id: ingestionId,
         tenantId: input.tenantId,
@@ -172,23 +190,45 @@ export class MemoryIngestService {
         userId: input.userId,
         entityKey: input.entityKey ?? null,
         sessionId: input.sessionId ?? null,
-        sourceType: "file",
+        sourceType,
         storageKey,
         fileHash,
-        totalChunks: 0, // Placeholder, updated by TS worker after Python finishes
+        totalChunks: 0, // Placeholder, updated by TS worker after chunking finishes
         status: "pending",
       });
 
-      const jobPayload: DocumentPreprocessJobData = {
-        ingestionId,
-        storageKey,
-        sourceType: "file",
-        tenantId: input.tenantId,
-        namespace: input.namespace,
-        userId: input.userId,
-      };
+      if (isBinary) {
+        // Binary path: PDF, DOCX, PPTX -> Python Parser
+        const jobPayload: DocumentParsingJobData = {
+          ingestionId,
+          storageKey,
+          fileName: file.name,
+          fileExtension: ext,
+          tenantId: input.tenantId,
+          namespace: input.namespace,
+          userId: input.userId,
+          entityKey: input.entityKey ?? null,
+          sessionId: input.sessionId ?? null,
+        };
 
-      await documentPreprocessQueue.add(DOCUMENT_PREPROCESS_QUEUE, jobPayload);
+        await documentParsingQueue.add(DOCUMENT_PARSING_QUEUE, jobPayload);
+      } else {
+        // Text/Code path: .md, .txt, code files -> TS Chunker directly
+        const jobPayload: ChunkingJobData = {
+          ingestionId,
+          sourceType: "text_file",
+          storageKey,
+          fileName: file.name,
+          fileExtension: ext,
+          tenantId: input.tenantId,
+          namespace: input.namespace,
+          userId: input.userId,
+          entityKey: input.entityKey ?? null,
+          sessionId: input.sessionId ?? null,
+        };
+
+        await chunkingQueue.add(CHUNKING_QUEUE, jobPayload);
+      }
 
       results.push({
         fileName: file.name,

@@ -135,6 +135,14 @@ export const memoryRelationships = pgTable(
   ],
 );
 
+export interface BoundingBox {
+  page: number;
+  l: number;
+  t: number;
+  r: number;
+  b: number;
+}
+
 export const evidence = pgTable(
   "evidence",
   {
@@ -145,9 +153,10 @@ export const evidence = pgTable(
     episodeId: uuid("episode_id")
       .notNull()
       .references(() => episodes.id, { onDelete: "cascade" }),
-    startOffset: integer("start_offset").notNull(),
-    endOffset: integer("end_offset").notNull(),
-    excerpt: text("excerpt"),
+    startOffset: integer("start_offset"),
+    endOffset: integer("end_offset"),
+    excerpt: text("excerpt").notNull(),
+    bboxes: jsonb("bboxes").$type<BoundingBox[] | null>(),
     confidence: real("confidence").notNull().default(1.0),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()

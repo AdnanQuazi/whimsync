@@ -1,6 +1,7 @@
+export const DOCUMENT_PARSING_QUEUE = "document-parsing";
+export const CHUNKING_QUEUE = "chunking";
 export const EPISODE_EXTRACTION_QUEUE = "episode-extraction";
-export const DOCUMENT_PREPROCESS_QUEUE = "document-preprocess";
-export const PREPROCESS_RESULT_QUEUE = "preprocess-result";
+export const CITATION_BBOX_QUEUE = "citation-bbox";
 
 export const MAX_FILE_SIZE_BYTES = 15 * 1024 * 1024; // 15 MB
 export const MAX_FILES_PER_REQUEST = 10;

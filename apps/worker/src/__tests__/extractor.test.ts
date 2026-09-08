@@ -83,6 +83,9 @@ describe("Single-Call LLM Extraction Engine (`extractEpisodeClaims`)", () => {
       sessionId: "session-extractor-test",
       rawText:
         "User prefers using Bun and TypeScript for high-performance backend systems.",
+      chunkIndex: 0,
+      chunkStartOffset: 0,
+      chunkEndOffset: 76,
     };
 
     // 2. Invoke extractEpisodeClaims directly
@@ -135,6 +138,9 @@ describe("Single-Call LLM Extraction Engine (`extractEpisodeClaims`)", () => {
       entityKey: null,
       sessionId: null,
       rawText: "Missing episode test.",
+      chunkIndex: 0,
+      chunkStartOffset: 0,
+      chunkEndOffset: 21,
     };
 
     await expect(extractEpisodeClaims(jobData)).rejects.toThrow(
