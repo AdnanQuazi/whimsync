@@ -2,11 +2,12 @@ import { createMiddleware } from "hono/factory";
 import { clerk } from "../config/clerk";
 
 export const clerkAuth = createMiddleware(async (c, next) => {
-  const isMockAuthEnabled = process.env.NODE_ENV === "test";
+  const testUserId = c.req.header("x-test-clerk-user-id") || null;
+  const isMockAuthEnabled =
+    process.env.NODE_ENV === "test" ||
+    (process.env.NODE_ENV !== "production" && Boolean(testUserId));
 
   if (isMockAuthEnabled) {
-    const testUserId = c.req.header("x-test-clerk-user-id") || null;
-
     c.set("clerkAuth", (() => ({
       userId: testUserId,
       sessionClaims: testUserId
