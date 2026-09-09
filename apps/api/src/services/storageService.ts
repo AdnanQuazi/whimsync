@@ -31,9 +31,17 @@ export class StorageService {
   async uploadFile(
     buffer: Buffer | ArrayBuffer,
     originalName: string,
+    options?: {
+      tenantId?: string;
+      namespace?: string;
+      ingestionId?: string;
+    },
   ): Promise<string> {
     const ext = originalName.split(".").pop() || "bin";
-    const storageKey = `uploads/${crypto.randomUUID()}.${ext}`;
+    const storageKey =
+      options?.tenantId && options?.namespace && options?.ingestionId
+        ? `uploads/${options.tenantId}/${options.namespace}/${options.ingestionId}/raw.${ext}`
+        : `uploads/${crypto.randomUUID()}.${ext}`;
 
     const fileBuffer = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
 

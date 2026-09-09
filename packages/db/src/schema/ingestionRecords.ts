@@ -56,6 +56,7 @@ export const ingestionRecords = pgTable(
     rawTextInline: text("raw_text_inline"),
 
     status: ingestionStatusEnum("status").notNull().default("pending"),
+    parsingTier: text("parsing_tier").default("smart"),
 
     // populated after summarization (if generated)
     documentSummary: text("document_summary"),

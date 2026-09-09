@@ -34,6 +34,7 @@ export interface IngestFilesInput {
   userId: string;
   entityKey?: string | null;
   sessionId?: string | null;
+  tier?: "fast" | "smart" | "max";
 }
 
 export interface FileIngestResult {
@@ -42,13 +43,18 @@ export interface FileIngestResult {
   status: "processing" | "existing";
 }
 
+export interface IngestTextResult {
+  ingestionId: string;
+  episodeId?: string;
+}
+
 export class MemoryIngestService {
   /**
    * Ingest plain text. Enforces the 1500-character threshold.
    * - <= 1500 chars: fast path (direct to extraction)
    * - > 1500 chars: full path (send directly to chunker)
    */
-  async ingestText(input: IngestTextInput): Promise<string> {
+  async ingestText(input: IngestTextInput): Promise<IngestTextResult> {
     const ingestionId = crypto.randomUUID();
 
     if (input.text.length <= FAST_PATH_CHAR_LIMIT) {
@@ -99,6 +105,8 @@ export class MemoryIngestService {
       };
 
       await episodeQueue.add(EPISODE_EXTRACTION_QUEUE, jobPayload);
+
+      return { ingestionId, episodeId };
     } else {
       // ----------------------------------------
       // FULL PATH: Long text. Send to Chunker directly.
@@ -131,9 +139,9 @@ export class MemoryIngestService {
       };
 
       await chunkingQueue.add(CHUNKING_QUEUE, jobPayload);
-    }
 
-    return ingestionId;
+      return { ingestionId };
+    }
   }
 
   /**
@@ -177,6 +185,11 @@ export class MemoryIngestService {
       const storageKey = await storageService.uploadFile(
         Buffer.from(buffer),
         file.name,
+        {
+          tenantId: input.tenantId,
+          namespace: input.namespace,
+          ingestionId,
+        },
       );
 
       const ext = getExtension(file.name);
@@ -195,6 +208,7 @@ export class MemoryIngestService {
         fileHash,
         totalChunks: 0, // Placeholder, updated by TS worker after chunking finishes
         status: "pending",
+        parsingTier: input.tier ?? "smart",
       });
 
       if (isBinary) {
@@ -209,6 +223,7 @@ export class MemoryIngestService {
           userId: input.userId,
           entityKey: input.entityKey ?? null,
           sessionId: input.sessionId ?? null,
+          tier: input.tier ?? "smart",
         };
 
         await documentParsingQueue.add(DOCUMENT_PARSING_QUEUE, jobPayload);

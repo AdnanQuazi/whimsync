@@ -21,7 +21,7 @@ export class MemoryController {
 
     const body = c.req.valid("json");
 
-    const ingestionId = await memoryIngestService.ingestText({
+    const result = await memoryIngestService.ingestText({
       text: body.text,
       tenantId: activeTenantId,
       namespace: body.namespace,
@@ -32,10 +32,13 @@ export class MemoryController {
 
     return successResponse(
       c,
-      "Text ingestion started",
+      result.episodeId
+        ? "Episode ingested and queued for extraction"
+        : "Text ingestion started",
       {
-        ingestionId,
-        status: "processing",
+        ingestionId: result.ingestionId,
+        episodeId: result.episodeId,
+        status: "accepted",
       },
       202,
     );
@@ -64,9 +67,10 @@ export class MemoryController {
       userId: user.id,
       entityKey: body.entityKey ?? null,
       sessionId: body.sessionId ?? null,
+      tier: body.tier,
     });
 
-    return successResponse(c, "Files processed successfully", { results }, 202);
+    return successResponse(c, "Files uploaded", { results }, 202);
   }
 }
 

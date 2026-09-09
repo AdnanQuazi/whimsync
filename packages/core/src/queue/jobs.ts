@@ -8,6 +8,7 @@ export interface DocumentParsingJobData {
   userId: string;
   entityKey?: string | null;
   sessionId?: string | null;
+  tier?: "fast" | "smart" | "max" | null;
 }
 
 export interface ChunkingJobData {
