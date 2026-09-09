@@ -6,7 +6,7 @@ on:
 
 jobs:
   test-node:
-    name: Run TypeScript Tests (`bun test`)
+    name: Run Tests (`bun test`)
     runs-on: ubuntu-latest
     env:
       NODE_ENV: test

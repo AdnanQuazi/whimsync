@@ -6,7 +6,7 @@ on:
 
 jobs:
   lint-node:
-    name: Run Biome Check (Node / TS)
+    name: Run Biome Check
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -29,6 +29,9 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
+
+      - name: Install Dependencies
+        run: uv sync --directory apps/extractor --extra dev
 
       - name: Run Ruff Lint Check
         run: uv run --directory apps/extractor ruff check .
