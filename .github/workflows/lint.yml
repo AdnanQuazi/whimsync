@@ -5,8 +5,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  lint:
-    name: Run Biome Check
+  lint-node:
+    name: Run Biome Check (Node / TS)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -17,3 +17,21 @@ jobs:
 
       - name: Run Biome Linter & Formatter Check
         run: bun run lint
+
+  lint-python:
+    name: Run Ruff Check (Python)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Run Ruff Lint Check
+        run: uv run --directory apps/extractor ruff check .
+
+      - name: Run Ruff Format Check
+        run: uv run --directory apps/extractor ruff format --check .
