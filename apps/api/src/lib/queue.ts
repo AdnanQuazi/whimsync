@@ -1,4 +1,8 @@
 import {
+  CHUNKING_QUEUE,
+  type ChunkingJobData,
+  DOCUMENT_PARSING_QUEUE,
+  type DocumentParsingJobData,
   EPISODE_EXTRACTION_QUEUE,
   type EpisodeExtractionJobData,
 } from "@whimsync/core";
@@ -23,6 +27,41 @@ export const episodeQueue = new Queue<EpisodeExtractionJobData, void, string>(
       removeOnFail: {
         age: 604800, // Keep failed jobs for 7 days for audit/debugging
       },
+    },
+  },
+);
+
+export const documentParsingQueue = new Queue<
+  DocumentParsingJobData,
+  void,
+  string
+>(DOCUMENT_PARSING_QUEUE, {
+  // biome-ignore lint/suspicious/noExplicitAny: Required for BullMQ connection options compatibility
+  connection: redisConnection as any,
+  defaultJobOptions: {
+    attempts: 3,
+    backoff: {
+      type: "exponential",
+      delay: 2000,
+    },
+    removeOnComplete: { age: 86400, count: 1000 },
+    removeOnFail: { age: 604800 },
+  },
+});
+
+export const chunkingQueue = new Queue<ChunkingJobData, void, string>(
+  CHUNKING_QUEUE,
+  {
+    // biome-ignore lint/suspicious/noExplicitAny: Required for BullMQ connection options compatibility
+    connection: redisConnection as any,
+    defaultJobOptions: {
+      attempts: 3,
+      backoff: {
+        type: "exponential",
+        delay: 2000,
+      },
+      removeOnComplete: { age: 86400, count: 1000 },
+      removeOnFail: { age: 604800 },
     },
   },
 );

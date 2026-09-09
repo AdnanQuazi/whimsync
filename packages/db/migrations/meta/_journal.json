@@ -22,6 +22,41 @@
       "when": 1784895042013,
       "tag": "0002_pretty_the_anarchist",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1785508489207,
+      "tag": "0003_magical_mantis",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1785509897122,
+      "tag": "0004_calm_sway",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1785947622752,
+      "tag": "0005_tired_colonel_america",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788881244030,
+      "tag": "0006_chilly_dagger",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788940169219,
+      "tag": "0007_eminent_clint_barton",
+      "breakpoints": true
     }
   ]
 }
