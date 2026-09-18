@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./cognitive": "./src/cognitive/index.ts",
-    "./queue": "./src/queue/index.ts"
+    "./queue": "./src/queue/index.ts",
+    "./services": "./src/services/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
@@ -15,6 +16,8 @@
     "@types/bun": "latest"
   },
   "dependencies": {
+    "@types/node": "^22.20.3",
+    "minio": "^8.0.7",
     "zod": "^4.4.3"
   }
 }

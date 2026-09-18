@@ -100,7 +100,6 @@ export class MemoryIngestService {
         chunkStartOffset: 0,
         chunkEndOffset: input.text.length,
         documentSummary: null,
-        contextPrefix: null,
         headingPath: null,
       };
 
