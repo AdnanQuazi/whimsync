@@ -49,5 +49,4 @@ export interface EpisodeExtractionJobData {
   chunkEndOffset: number;
   headingPath?: string | null;
   documentSummary?: string | null;
-  contextPrefix?: string | null;
 }

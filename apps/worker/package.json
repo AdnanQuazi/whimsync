@@ -7,10 +7,15 @@
   },
   "dependencies": {
     "@google/genai": "^2.13.0",
+    "@langchain/textsplitters": "^1.0.1",
+    "@types/uuid": "^11.0.0",
     "@whimsync/core": "workspace:*",
     "@whimsync/db": "workspace:*",
     "bullmq": "^5.41.0",
+    "code-chunk": "^0.1.14",
+    "drizzle-orm": "^0.45.2",
     "ioredis": "^5.5.0",
+    "uuid": "^14.0.2",
     "zod-to-json-schema": "^3.25.2"
   },
   "devDependencies": {

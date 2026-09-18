@@ -124,7 +124,6 @@ uploads/
     chunkEndOffset: number;
     headingPath?: string | null;
     documentSummary?: string | null;
-    contextPrefix?: string | null;
   }
   ```
 
@@ -258,41 +257,22 @@ parsingTier: text("parsing_tier").default("smart"),
 
 ### Stage 3: Dynamic Chunker Worker (TypeScript — `apps/worker`)
 1. **Fetch & Resolve Source Content:**
-   * If `storageKey` is present, stream from MinIO.
-   * If `rawTextInline` is present, read directly.
-2. **Dynamic Chunking Strategies:**
+   * Driven by explicit `sourceType` contract.
+   * If `text_file` or binary, fetch from MinIO via `storageKey`.
+   * If `inline_text`, read directly from `rawTextInline` payload.
+2. **Dynamic Chunking Strategies (via `chunkerEngine`):**
+   * **Language Detection:** Uses weighted voting classifier (regex heuristics) to accurately detect content type (Markdown, JSON, or specific Code language) prior to routing.
    * **Markdown (`.md` or parsed binary):**
-     Two-step Header $\rightarrow$ Recursive size splitting:
-     ```typescript
-     const headerSplitter = new MarkdownHeaderTextSplitter({
-       headersToSplitOn: [
-         ["#", "h1"],
-         ["##", "h2"],
-         ["###", "h3"],
-       ],
-     });
-     const sections = await headerSplitter.splitText(markdown);
-     const chunker = new RecursiveCharacterTextSplitter({
-       chunkSize: 1500,
-       chunkOverlap: 100,
-     });
-     const chunks = await chunker.splitDocuments(sections);
-     ```
-     Extract `headingPath` from section metadata (e.g. `h1 > h2 > h3`).
+     * Extracts code fences and runs them through `code-chunk` for AST signatures.
+     * Uses custom regex `MarkdownHeaderSplitter` (CRLF-aware) to preserve hierarchical header paths (`headingPath`).
+     * Sub-chunks large prose sections via `RecursiveCharacterTextSplitter` (`chunkOverlap: 0`).
+     * Re-hydrates AST code chunks into sections.
+     * Merges orphaned tail/head fragments (<100 chars) cleanly into adjacent prose chunks.
+   * **JSON Files:**
+     * Custom recursive JSON object/array splitter preserving full object key paths as `headingPath`.
    * **Code Files (`.ts`, `.py`, `.js`, etc.):**
-     ```typescript
-     const chunker = RecursiveCharacterTextSplitter.fromLanguage(language, {
-       chunkSize: 1500,
-       chunkOverlap: 100,
-     });
-     ```
-   * **Plain Text (`.txt`, raw text):**
-     ```typescript
-     const chunker = new RecursiveCharacterTextSplitter({
-       chunkSize: 1500,
-       chunkOverlap: 100,
-     });
-     ```
+     * Fully AST-aware contextual chunking using `@trieve/code-chunk`. Preserves full function/class signatures in each chunk.
+   * **Offset Tracking:** Computes strict monotonic character offsets (`chunkStartOffset`, `chunkEndOffset`) across the original raw string for accurate evidence correlation.
 3. **Database Insertion & Fan-Out:**
    * Batch insert $N$ rows into `episodes` with `status = "pending"`, `chunkIndex`, `chunkStartOffset`, `chunkEndOffset`, `headingPath`.
    * Update `ingestion_records.totalChunks = N` and `status = "extracting"`.
@@ -365,10 +345,12 @@ parsingTier: text("parsing_tier").default("smart"),
 
 
 ### Phase 3: TypeScript Chunker Worker
-- [ ] Create `apps/worker/src/consumers/chunkerConsumer.ts` consuming `CHUNKING_QUEUE`.
-- [ ] Implement `MarkdownHeaderTextSplitter` + `RecursiveCharacterTextSplitter` pipeline with dynamic header path extraction.
-- [ ] Implement language-aware code splitter and plain text splitter.
-- [ ] Batch write episodes to DB and fan-out jobs to `EPISODE_EXTRACTION_QUEUE`.
+- [x] Create `apps/worker/src/consumers/chunkerConsumer.ts` consuming `CHUNKING_QUEUE`.
+- [x] Implement robust `chunking` module with language detection and explicit sourceType fetching.
+- [x] Implement AST-aware Markdown splitter with CRLF support, code fence rehydration, and orphan fragment merging.
+- [x] Implement AST-aware code splitter (via `@trieve/code-chunk`) and recursive JSON splitter.
+- [x] Compute and validate monotonic character offsets across all generated chunks.
+- [x] Batch write episodes to DB (Note: fan-out to `EPISODE_EXTRACTION_QUEUE` is currently paused in code for iterative testing).
 
 ### Phase 4: Episode Consumer Completion Check
 - [ ] Update `apps/worker/src/consumers/episodeConsumer.ts`:
