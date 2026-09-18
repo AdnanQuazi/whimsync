@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  test-node:
     name: Run Tests (`bun test`)
     runs-on: ubuntu-latest
     env:
@@ -13,6 +13,12 @@ jobs:
       DATABASE_URL: postgres://whimsync:whimsync_dev_pass@localhost:5432/whimsync
       REDIS_URL: redis://localhost:6379
       CLERK_SECRET_KEY: "" # Empty to enable test header auth bypass in clerkAuth
+      MINIO_ENDPOINT: "localhost"
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: "whimsync"
+      MINIO_SECRET_KEY: "whimsync_dev_pass"
+      MINIO_BUCKET: "whimsync-test-cold"
+      MINIO_USE_SSL: "false"
 
     services:
       postgres:
@@ -51,3 +57,21 @@ jobs:
 
       - name: Run Integration Tests
         run: bun test
+
+  test-python:
+    name: Run Extractor Tests (`pytest`)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install Dependencies
+        run: uv sync --directory apps/extractor --extra dev
+
+      - name: Run Pytest
+        run: uv run --directory apps/extractor pytest

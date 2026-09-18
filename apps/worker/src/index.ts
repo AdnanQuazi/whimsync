@@ -1,17 +1,21 @@
 import { db } from "@whimsync/db";
+import { chunkerWorker, closeChunkerWorker } from "./consumers/chunkerConsumer";
 import { closeEpisodeWorker, episodeWorker } from "./consumers/episodeConsumer";
 
 console.log(
   "Whimsync BullMQ Worker initialized with shared DB client:",
   !!db,
-  "| Worker name:",
+  "| Episode Worker:",
   episodeWorker.name,
+  "| Chunker Worker:",
+  chunkerWorker.name,
 );
 
 async function gracefulShutdown(signal: string) {
   console.log(`\n[Worker] Received ${signal}. Starting graceful shutdown...`);
   try {
     await closeEpisodeWorker();
+    await closeChunkerWorker();
     await db.$client.end();
     console.log("[Worker] Graceful shutdown completed successfully.");
     process.exit(0);

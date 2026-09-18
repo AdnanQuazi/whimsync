@@ -8,7 +8,12 @@
       "!node_modules",
       "!.next",
       "!dist",
-      "!build"
+      "!build",
+      "!**/.venv",
+      "!**/.pytest_cache",
+      "!**/__pycache__",
+      "!apps/extractor",
+      "!packages/db/migrations"
     ]
   },
   "linter": {

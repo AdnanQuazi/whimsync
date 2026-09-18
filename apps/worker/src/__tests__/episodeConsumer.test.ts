@@ -101,6 +101,9 @@ describe("BullMQ Consumer Integration (`episodeConsumer`)", () => {
       entityKey: "test:consumer",
       sessionId: "session-queue-test",
       rawText: "Integration test memory episode for BullMQ queue worker.",
+      chunkIndex: 0,
+      chunkStartOffset: 0,
+      chunkEndOffset: 57,
     };
 
     // 2. Setup promise to listen for episodeWorker "completed" event matching this episodeId
