@@ -84,7 +84,7 @@
 
 ---
 
-## ⚪ Phase 6: Deferred Consumer Features & Projections (`WHIMSYNC.md` Section 9)
+## ⚪ Phase 6: Deferred Consumer Features & Projections (Future Roadmap)
 
 ### Step 12: Context Projection Endpoints & Advanced Consumer Features
 - [ ] Implement inspectable context projection endpoints (`GET /v1/wiki`, `GET /v1/profile`).

@@ -1,81 +1,68 @@
-# Whimsync v1 — Cognitive Memory & Context Layer for AI
+# Whimsync — Memory and Content Engine for AI
 
-> **Fast, explainable, multi-tenant AI memory with single-call extraction and citation-backed claims.**
-
-[![Runtime](https://img.shields.io/badge/Runtime-Bun%20%7C%20TypeScript-black.svg)]()
-[![API Framework](https://img.shields.io/badge/API-Hono-orange.svg)]()
-[![Frontend](https://img.shields.io/badge/Frontend-Next.js%20(React)-blue.svg)]()
-[![Database](https://img.shields.io/badge/Database-Postgres%20%2B%20pgvector-316192.svg)]()
-[![Queue](https://img.shields.io/badge/Queue-Redis%20%2B%20BullMQ-red.svg)]()
+> **Your AI forgets everything between conversations. Whimsync fixes that.**
+> It automatically learns from interactions, extracts facts, builds knowledge graphs, handles updates and contradictions, and delivers the right context at the right time. File processing, fact extraction, multimodal understanding — the entire context stack in one system.
 
 ---
 
-## ⚡ Overview & Design Goals
+## ⚡ Core Capabilities
 
-Whimsync is a stateful, explainable memory and context layer designed for AI assistants, coding agents, and multi-tenant applications.
-
-### Core Design Goals
-- **Fast ingestion, single LLM understanding call:** Ingest messages instantly and perform single-call extraction of claims, relationship edges, entity quintuplets, and mutations.
-- **Accurate relationship classification:** Build structured relationship graphs (`UPDATES`, `EXTENDS`, `SUPPORTS`, `CONTRADICTS`, `DERIVES`, `MENTIONS`) between claims and entities.
-- **Real storage tiering (Hot / Warm / Cold):** Query active memory inline from Postgres (`Hot`), filter superseded/expired claims cleanly (`Warm`), and archive audit logs to object storage (`Cold`).
-- **Explainable, citation-backed memory:** Every extracted claim links directly to immutable character offsets in raw source `episodes` via authoritative `evidence` rows.
-- **Multi-tenant (personal + enterprise) support from day one:** Enforce a unified org-and-namespace access control contract (`Every account is an org`).
+- **Fact & Relationship Extraction:** Automatically extracts atomic facts, semantic relationship edges (`UPDATES`, `EXTENDS`, `SUPPORTS`, `CONTRADICTS`), and entity knowledge from text and documents.
+- **Temporal Memory & Contradiction Resolution:** Detects when new information invalidates or updates prior understanding, marking stale claims as superseded while preserving historical lineage.
+- **Multimodal Document Processing:** Ingests complex files—including PDFs, Word documents (`.docx`), slide decks (`.pptx`), markdown, and source code.
+- **Tier-Based Parsing for Controlled Cost:** Routes documents across deterministic extraction, multi-signal layout complexity analysis, or visual layout models (VLM) to balance speed, fidelity, and cost.
+- **Verifiable Evidence & Citations:** Every extracted claim links directly to immutable character offset ranges in source material for transparent verification.
 
 ---
 
-## 🏗️ Architecture & Pipeline
+## 🗺️ Monorepo Map
 
-```mermaid
-flowchart LR
-    A[Raw message] --> B[Store raw episode]
-    B --> C[Return 200 OK]
-    B --> D[BG Worker: single LLM call]
-    D --> E[Claims + edges + quintuplets + mutations]
-    E --> F[Embed claims]
-    F --> G[Store: status = pending_review]
-    G --> H[Mutation evaluation vs prior claims]
-    H --> I[Atomic flip: active / superseded]
-```
+Whimsync is organized as a layered polyglot monorepo. Each component contains its own dedicated guide:
 
----
-
-## 🛠️ Technology Stack
-
-- **Language & Runtime:** TypeScript on Bun
-- **API HTTP Layer:** Hono
-- **Frontend Dashboard:** Next.js (React)
-- **Primary Database:** PostgreSQL + `pgvector`
-- **Queue & Worker Engine:** Redis + BullMQ
-- **Cold Storage:** MinIO (local) / Cloudflare R2 or AWS S3 (cloud)
+| Component | Runtime / Stack | Description |
+|---|---|---|
+| [`apps/api`](apps/api/README.md) | Bun, Hono | HTTP gateway, Clerk auth, and ingestion routing |
+| [`apps/extractor`](apps/extractor/README.md) | Python 3.12, uv | PDF/Office layout parser and Gemini VLM |
+| [`apps/worker`](apps/worker/README.md) | Bun, BullMQ | AST chunker, Gemini extraction, and mutation engine |
+| [`packages/db`](packages/db/README.md) | Drizzle, PostgreSQL | Database schema, pgvector HNSW index, and migrations |
+| [`packages/core`](packages/core/README.md) | TypeScript | Shared queue contracts, cognitive schemas, and S3 client |
+| [`docs/architecture.md`](docs/architecture.md) | Markdown | Master architectural specification and data contracts |
 
 ---
 
-## 🚀 Quick Start (Local Development)
+## 🚀 Quick Start (Local Setup)
 
 ### 1. Prerequisites
-Ensure you have [Bun](https://bun.sh/) and [Docker](https://www.docker.com/) installed.
+- [Bun](https://bun.sh/) (>= 1.2)
+- [Docker & Docker Compose](https://www.docker.com/)
+- [uv](https://docs.astral.sh/uv/) (Python package manager, >= 0.4)
+- [LibreOffice](https://www.libreoffice.org/) (system binary; optional, only required if converting Office `.docx`/`.pptx` files to PDF)
 
-### 2. Launch Local Infrastructure
-Start local PostgreSQL (`pgvector`), Redis, and MinIO containers in the background:
+### 2. Start Infrastructure & Bootstrap
 ```bash
+# 1. Start local PostgreSQL (pgvector), Redis, and MinIO
 docker compose up -d
+
+# 2. Configure environment
+cp .env.example .env
+
+# 3. Install dependencies (Bun workspaces + Python uv virtualenv)
+bun run setup
+
+# 4. Run database migrations
+bun run db:migrate
 ```
 
-### 3. Install Workspace Dependencies
-```bash
-bun install
-```
+### 3. Start Development Services
+Run the services across separate terminals:
 
-### 4. Start Development Servers
-Run the Hono API server (`apps/api`) in development mode with hot reload:
 ```bash
+# Terminal 1: HTTP API Gateway (runs on http://localhost:3001)
 bun run dev:api
+
+# Terminal 2: BullMQ Worker (AST Chunker & Cognitive Extractor)
+bun run dev:worker
+
+# Terminal 3: Python Binary Document Parser
+bun run dev:extractor
 ```
-The API server will run locally at `http://localhost:3000`.
-
----
-
-## 📚 Documentation
-- **[WHIMSYNC.md](./WHIMSYNC.md):** Canonical v1 Master Architectural Blueprint.
-- **[PROGRESS.md](./PROGRESS.md):** Development Roadmap & Milestone Tracker.
-- **[.agents/AGENTS.md](./.agents/AGENTS.md):** Agent Commandments & Coding Standards.
